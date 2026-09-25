@@ -84,12 +84,17 @@ export function genoma(slug: string): Genoma {
 export function expandir(g: Genoma, iteraciones: number): string {
   let cadena = "X";
   for (let i = 0; i < iteraciones; i++) {
+    // en las especies de una sola rama por nudo, alternar el lado en cada
+    // iteración da un zigzag de helecho; si siempre gira al mismo lado, la
+    // cadena principal acumula el ángulo iteración tras iteración y acaba
+    // enroscada sobre sí misma en vez de subir.
+    const lado = i % 2 === 0 ? "+" : "-";
     let siguiente = "";
     for (const simbolo of cadena) {
       // F es terminal (no se reescribe): si también se duplicara en cada
       // iteración, el tronco principal crecería exponencialmente y se saldría
       // del visor sin llegar a mostrar ninguna rama.
-      siguiente += simbolo === "X" ? (g.ramaDoble ? "F[+X][-X]FX" : "F[+X]FX") : simbolo;
+      siguiente += simbolo === "X" ? (g.ramaDoble ? "F[+X][-X]FX" : `F[${lado}X]FX`) : simbolo;
     }
     cadena = siguiente;
   }

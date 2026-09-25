@@ -20,7 +20,7 @@ const SLUGS_EJEMPLO = [
 // Deben coincidir con jardin.ts para que la comparación sea honesta: el tronco
 // encadena ~2 segmentos por iteración, así que la longitud de paso se divide
 // por el máximo de iteraciones para no crecer sin límite al comparar iteraciones.
-const LONGITUD_BASE = 0.55;
+const LONGITUD_BASE = 0.65;
 const GROSOR_BASE = 0.05;
 const ITERACIONES_MAX_REFERENCIA = 6;
 

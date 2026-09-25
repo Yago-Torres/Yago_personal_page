@@ -8,6 +8,7 @@ export default defineConfig({
       input: {
         aparato: resolve(import.meta.dirname, "index.html"),
         calibracion: resolve(import.meta.dirname, "calibracion.html"),
+        prototipo: resolve(import.meta.dirname, "prototipo.html"),
       },
     },
   },

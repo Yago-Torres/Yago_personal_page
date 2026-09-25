@@ -26,7 +26,7 @@ const ESCALA_VERTICAL = 0.85;
 // vigor máximo, y grosor del primer segmento. El vigor (0..1) escala la
 // longitud de paso entre la mitad y el total de este valor: una planta con
 // vigor 0 nunca desaparece, solo queda en la mitad de tamaño.
-const LONGITUD_BASE = 0.55;
+const LONGITUD_BASE = 0.65;
 const GROSOR_BASE = 0.05;
 
 // El vigor (0..1) mapea linealmente a iteraciones del L-system. Subir el máximo

@@ -203,7 +203,8 @@ body {
   letter-spacing: .08em;
   text-transform: uppercase;
   opacity: .72;
-  z-index: 1;
+  /* por encima de .desbordes (z-index 3): el texto que cuenta nunca se lo tapa una rama */
+  z-index: 4;
 }
 
 .pantalla__lienzo {
