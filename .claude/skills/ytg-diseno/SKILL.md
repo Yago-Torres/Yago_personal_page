@@ -6,8 +6,14 @@ description: Sistema de diseño del aparato YTG-01 (yagotg.dev). Cargar SIEMPRE 
 # Sistema de diseño YTG-01
 
 El sitio no es una página: **es un aparato**. Una consola de cultivo que vigila
-un jardín compartido donde las plantas son proyectos reales. Todo lo que
+un jardín compartido donde las plantas son la carrera de Yago. Todo lo que
 escribas tiene que sostener esa ficción.
+
+**Regla de contenido, dura:** los árboles son etapas profesionales y **nunca**
+llevan nombres de cliente ni de proyecto interno. Llevan notas de qué se hizo,
+qué se usó y qué se aprendió. Solo los arbustos —proyectos personales y
+públicos— tienen nombre propio y enlace. Si dudas de si algo es publicable,
+no lo publiques y pregunta.
 
 ## La regla madre
 
