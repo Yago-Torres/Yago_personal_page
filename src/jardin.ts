@@ -22,14 +22,15 @@ const MARGEN_BASE = 0.08;
 // Subirla hace que las plantas desborden con menos vigor.
 const ESCALA_VERTICAL = 0.85;
 
-// Longitud y grosor del primer segmento, en unidades normalizadas de planta.
-// El vigor (0..1) escala la longitud entre la mitad y el total de este valor:
-// una planta con vigor 0 nunca desaparece, solo queda en la mitad de tamaño.
+// Alcance total (normalizado) que llega a tener el tronco de una planta con
+// vigor máximo, y grosor del primer segmento. El vigor (0..1) escala la
+// longitud de paso entre la mitad y el total de este valor: una planta con
+// vigor 0 nunca desaparece, solo queda en la mitad de tamaño.
 const LONGITUD_BASE = 0.55;
 const GROSOR_BASE = 0.05;
 
 // El vigor (0..1) mapea linealmente a iteraciones del L-system. Subir el máximo
-// dispara el número de segmentos de forma exponencial (ver botanica.ts).
+// da plantas con más detalle y ramas más profundas (ver botanica.ts).
 const ITERACIONES_MIN = 2;
 const ITERACIONES_MAX = 6;
 
@@ -77,8 +78,11 @@ function calcularPlanta(planta: Planta): PlantaCalculada {
   const g = genoma(planta.slug);
   const iteraciones = Math.round(ITERACIONES_MIN + (ITERACIONES_MAX - ITERACIONES_MIN) * planta.vigor);
   const cadena = expandir(g, iteraciones);
+  // el tronco (nivel 0) encadena ~2 segmentos de longitud completa por
+  // iteración: dividir por ITERACIONES_MAX mantiene el alcance total acotado
+  // en vez de crecer sin límite cuantas más iteraciones tenga la planta.
   const segmentos = tortuga(cadena, g, {
-    longitud: LONGITUD_BASE * (0.5 + 0.5 * planta.vigor),
+    longitud: (LONGITUD_BASE * (0.5 + 0.5 * planta.vigor)) / ITERACIONES_MAX,
     grosor: GROSOR_BASE,
   });
   return { planta, segmentos };

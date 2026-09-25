@@ -10,11 +10,11 @@ import { Vector2 } from "three";
 
 export const CALIBRACION = {
   // Niveles por canal. 2 = un bit por canal (durísimo). Subirlo suaviza y pierde gracia.
-  NIVELES: 6,
+  NIVELES: 10,
   // Lado del píxel de trama, en píxeles de pantalla. Subirlo engorda el grano.
   GRANO: 2,
   // Fuerza del desplazamiento Bayer. 0 = sin trama, 1 = trama completa.
-  FUERZA: 0.85,
+  FUERZA: 0.55,
 };
 
 export const TramadoShader = {

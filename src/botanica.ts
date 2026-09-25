@@ -12,10 +12,11 @@ const ANGULO_MAX = 42;
 const DECAIMIENTO_MIN = 0.55;
 const DECAIMIENTO_MAX = 0.82;
 
-// Deriva angular acumulada por cada segmento dibujado, en grados. Subirla da
-// plantas más "enroscadas"; en exceso el tronco se enrosca sobre sí mismo.
-const CURVATURA_MIN = -5;
-const CURVATURA_MAX = 5;
+// Deriva angular acumulada por cada segmento dibujado de una rama, en grados.
+// Se compone a lo largo de toda la cadena de una rama (puede haber muchos
+// segmentos): subir esto poco ya encoge una rama larga sobre sí misma.
+const CURVATURA_MIN = -1.4;
+const CURVATURA_MAX = 1.4;
 
 // Hojas dibujadas en cada punta de rama sin desarrollar. Subir el máximo
 // carga de ruido el tramado, sobre todo en plantas de pocas iteraciones.
@@ -85,13 +86,10 @@ export function expandir(g: Genoma, iteraciones: number): string {
   for (let i = 0; i < iteraciones; i++) {
     let siguiente = "";
     for (const simbolo of cadena) {
-      if (simbolo === "X") {
-        siguiente += g.ramaDoble ? "F[+X][-X]FX" : "F[+X]FX";
-      } else if (simbolo === "F") {
-        siguiente += "FF";
-      } else {
-        siguiente += simbolo;
-      }
+      // F es terminal (no se reescribe): si también se duplicara en cada
+      // iteración, el tronco principal crecería exponencialmente y se saldría
+      // del visor sin llegar a mostrar ninguna rama.
+      siguiente += simbolo === "X" ? (g.ramaDoble ? "F[+X][-X]FX" : "F[+X]FX") : simbolo;
     }
     cadena = siguiente;
   }
@@ -142,19 +140,22 @@ export function tortuga(cadena: string, g: Genoma, opciones: OpcionesTortuga): S
     grosor: opciones.grosor,
     nivel: 0,
   };
-  let deriva = 0;
 
   for (const simbolo of cadena) {
     if (simbolo === "F") {
-      const rad = ((estado.angulo + deriva) * Math.PI) / 180;
+      const rad = (estado.angulo * Math.PI) / 180;
       const x2 = estado.x + Math.cos(rad) * estado.longitud;
       const y2 = estado.y + Math.sin(rad) * estado.longitud;
       segmentos.push({ x1: estado.x, y1: estado.y, x2, y2, grosor: estado.grosor, nivel: estado.nivel });
       estado.x = x2;
       estado.y = y2;
-      deriva += g.curvatura;
+      // la deriva vive en el propio ángulo: al ser parte de `estado` se empuja y
+      // se recupera correctamente con cada rama, en vez de arrastrarse entre ramas.
+      // Solo se aplica a partir del nivel 1: el tronco principal sube recto y son
+      // las ramas las que se enroscan, si no la curvatura acaba encorvando el tronco.
+      if (estado.nivel > 0) estado.angulo += g.curvatura;
     } else if (simbolo === "L") {
-      const rad = ((estado.angulo + deriva + 90) * Math.PI) / 180;
+      const rad = ((estado.angulo + 90) * Math.PI) / 180;
       const largo = estado.longitud * 0.35;
       const x2 = estado.x + Math.cos(rad) * largo;
       const y2 = estado.y + Math.sin(rad) * largo;

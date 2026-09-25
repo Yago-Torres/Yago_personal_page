@@ -4,7 +4,7 @@ import { ACESFilmicToneMapping, PCFSoftShadowMap, Vector2, WebGLRenderer } from 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import { construirEscena, CALIBRACION as ESCENA } from "./escena";
+import { colocarCamara, construirEscena, CALIBRACION as ESCENA } from "./escena";
 import { TramadoShader, CALIBRACION as TRAMA } from "./tramado";
 
 const lienzo = document.getElementById("lienzo") as HTMLCanvasElement;
@@ -70,17 +70,24 @@ requestAnimationFrame(cuadro);
 
 /* ─── mandos de calibración ─────────────────────────────────── */
 
+// El tramado arranca suave: a 0 de fuerza desaparece del todo, para poder
+// comparar la escena limpia con la tramada moviendo un solo mando.
 const mandos: [string, string, number, number, number, (v: number) => void][] = [
-  ["niveles", "niveles de color", 2, 12, TRAMA.NIVELES, (v) => (pasoTramado.uniforms["uNiveles"]!.value = v)],
-  ["grano", "grano de trama", 1, 6, TRAMA.GRANO, (v) => (pasoTramado.uniforms["uGrano"]!.value = v)],
-  ["fuerza", "fuerza del tramado", 0, 1, TRAMA.FUERZA, (v) => (pasoTramado.uniforms["uFuerza"]!.value = v)],
+  ["fuerza", "tramado (0 = sin)", 0, 1, TRAMA.FUERZA, (v) => (pasoTramado.uniforms["uFuerza"]!.value = v)],
+  ["niveles", "niveles de color", 2, 24, TRAMA.NIVELES, (v) => (pasoTramado.uniforms["uNiveles"]!.value = v)],
+  ["grano", "grano de trama", 1, 8, TRAMA.GRANO, (v) => (pasoTramado.uniforms["uGrano"]!.value = v)],
+  ["distancia", "distancia de cámara", 10, 34, ESCENA.DISTANCIA, (v) => colocarCamara(camera, v, ESCENA.ALTURA)],
+  ["altura", "altura de cámara", 0.1, 1, ESCENA.ALTURA, (v) => {
+    ESCENA.ALTURA = v;
+    colocarCamara(camera, Number((document.getElementById("distancia") as HTMLInputElement).value), v);
+  }],
   ["giro", "giro automático", 0, 12, ESCENA.GIRO, (v) => (ESCENA.GIRO = v)],
 ];
 
 const panel = document.getElementById("mandos")!;
 for (const [id, etiqueta, min, max, valor, aplicar] of mandos) {
   const fila = document.createElement("label");
-  const paso = max <= 1 ? 0.05 : max <= 12 ? 0.1 : 1;
+  const paso = max <= 1 ? 0.02 : max <= 12 ? 0.1 : 1;
   fila.innerHTML = `<span>${etiqueta}</span><input type="range" id="${id}" min="${min}" max="${max}" step="${paso}" value="${valor}"><output>${valor}</output>`;
   panel.append(fila);
   const rango = fila.querySelector("input")!;

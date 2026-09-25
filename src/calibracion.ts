@@ -17,9 +17,12 @@ const SLUGS_EJEMPLO = [
   "hiedra-trepadora",
 ];
 
-// Deben coincidir con jardin.ts para que la comparación sea honesta.
+// Deben coincidir con jardin.ts para que la comparación sea honesta: el tronco
+// encadena ~2 segmentos por iteración, así que la longitud de paso se divide
+// por el máximo de iteraciones para no crecer sin límite al comparar iteraciones.
 const LONGITUD_BASE = 0.55;
 const GROSOR_BASE = 0.05;
+const ITERACIONES_MAX_REFERENCIA = 6;
 
 interface Ajustes {
   vigor: number;
@@ -109,7 +112,7 @@ function dibujarTarjeta(
   const g: Genoma = { ...base, angulo: ajustes.angulo, decaimiento: ajustes.decaimiento };
   const cadena = expandir(g, ajustes.iteraciones);
   const segmentos = tortuga(cadena, g, {
-    longitud: LONGITUD_BASE * (0.5 + 0.5 * ajustes.vigor),
+    longitud: (LONGITUD_BASE * (0.5 + 0.5 * ajustes.vigor)) / ITERACIONES_MAX_REFERENCIA,
     grosor: GROSOR_BASE,
   });
 
