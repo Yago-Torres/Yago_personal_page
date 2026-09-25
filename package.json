@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "check": "node --experimental-strip-types src/tiempo.check.ts"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
