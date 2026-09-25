@@ -206,15 +206,12 @@ body {
   z-index: 1;
 }
 
-.pantalla__vacia {
+.pantalla__lienzo {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-content: center;
-  gap: calc(var(--paso) / 2);
-  text-align: center;
-  font-size: 11px;
-  opacity: .45;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
 /* ─── instrumentos ──────────────────────────────────────────── */

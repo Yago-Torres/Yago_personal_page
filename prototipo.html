@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YTG-01 · prototipo de dirección visual</title>
+    <style>
+      :root {
+        --tipo: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; overflow: hidden; background: #cdc8bd; font-family: var(--tipo); }
+      #lienzo { display: block; width: 100vw; height: 100dvh; }
+
+      .rotulo {
+        position: fixed;
+        top: 20px;
+        left: 24px;
+        font-size: 10px;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: #4b4438;
+      }
+      .rotulo b { display: block; font-size: 15px; letter-spacing: -.01em; text-transform: none; }
+
+      #mandos {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border-radius: 10px;
+        background: #ffffffbf;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 6px 24px #0000001f;
+        font-size: 10px;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #4b4438;
+      }
+      #mandos label {
+        display: grid;
+        grid-template-columns: 130px 140px 34px;
+        align-items: center;
+        gap: 10px;
+      }
+      #mandos output { text-align: right; font-variant-numeric: tabular-nums; }
+      #mandos input { width: 100%; }
+    </style>
+  </head>
+  <body>
+    <canvas id="lienzo"></canvas>
+
+    <div class="rotulo">
+      <b>YTG-01</b>
+      prototipo · diorama + tramado
+    </div>
+
+    <div id="mandos"></div>
+
+    <script type="module" src="/src/prototipo/main.ts"></script>
+  </body>
+</html>

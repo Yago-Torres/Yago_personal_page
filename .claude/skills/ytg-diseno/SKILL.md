@@ -11,12 +11,17 @@ escribas tiene que sostener esa ficción.
 
 ## La regla madre
 
-> **El chasis tiene color. La pantalla es de 1 bit.**
+> **El aparato tiene materia. La pantalla es de 1 bit.**
 
-Los amarillos, azules y rojos saturados viven en el plástico del aparato.
-Dentro del cristal solo hay dos valores: fondo y fósforo, con tramado para los
-grises. Nunca metas color de acento dentro de la pantalla ni tramado fuera de
-ella. Si las dos capas se mezclan, el concepto se cae.
+El sitio es un **diorama isométrico en 3D**: una isla flotante cuyo corte de
+subsuelo es el CV, con el aparato encima y las plantas creciendo alrededor.
+Toda la escena pasa por un post-proceso de tramado ordenado con cuantización a
+paleta corta —no a 1 bit, que se cargaría el material—, de modo que el plástico
+translúcido, el reflejo y la sombra sobreviven a la trama.
+
+La pantalla del aparato sí es **1 bit estricto**, porque se dibuja en su propia
+textura antes del post-proceso. Nunca metas color de acento dentro de la
+pantalla. Si esas dos capas se mezclan, el concepto se cae.
 
 ## Las tres capas
 
@@ -35,6 +40,8 @@ Están todos en `src/style.css` bajo `:root`. **Nunca escribas un color literal
 en una regla**: si falta un token, añádelo ahí.
 
 - Chasis: `--chasis`, `--chasis-alto`, `--chasis-bajo`, `--surco`
+  (plástico translúcido mate, hueso apagado. **El amarillo y el verde chillón
+  se descartaron**: no los reintroduzcas.)
 - Serigrafía: `--tinta`, `--tinta-tenue`
 - Acentos, exactamente tres: `--azul` (botón maestro), `--rojo` (marca y ayuda), `--verde` (señal de vida)
 - Pantalla: `--pantalla`, `--fosforo`, `--reticula`
@@ -62,21 +69,25 @@ de 1–5px del relieve físico (bordes, cantos, sombras duras).
 
 El aparato tiene volumen y hay que mantenerlo:
 
-- El canto se hace apilando `box-shadow` planos, no con gradientes ni 3D real.
-- **Prohibido Three.js, WebGL y cualquier motor 3D.** El volumen es CSS y el
-  desbordamiento del jardín es un segundo canvas (`.desbordes`) por encima del
-  chasis. Si crees que hace falta un motor 3D, para y pregunta.
-- La inclinación con el puntero está limitada a pocos grados y se desactiva con
-  `prefers-reduced-motion` y en dispositivos táctiles.
+- El volumen es **real**: Three.js, materiales físicos, luz de estudio y sombra
+  de contacto. El aparato es plástico translúcido mate
+  (`MeshPhysicalMaterial` con `transmission`), nunca plano ni de color chillón.
+- El movimiento de cámara es lento y corto: giro automático de pocos grados por
+  segundo más un paralaje leve con el puntero. Nada de órbita libre brusca.
+- Se desactiva con `prefers-reduced-motion` y se aligera en táctil.
+- **Cero dependencias más allá de `three`.** Nada de motores de física, GUI de
+  depuración ni librerías de post-proceso: los pases se escriben a mano.
 
 ## Tramado
 
-- Bayer ordenado 4×4. Nada de difusión de error: el ruido de Floyd-Steinberg
-  parpadea al animar.
-- Se dibuja en un buffer interno pequeño (≈480×270) y se escala con
-  `imageSmoothingEnabled = false` y `image-rendering: pixelated`. El píxel
-  gordo es parte del estilo, no un defecto.
-- Dos valores de salida: `--pantalla` y `--fosforo`. Ni uno más.
+- **Escena 3D**: Bayer ordenado 8×8 como paso de post-proceso, cuantizando a
+  pocos niveles por canal (ver `src/prototipo/tramado.ts`). Nada de difusión de
+  error: Floyd-Steinberg parpadea al animar.
+- **Pantalla del aparato**: Bayer 4×4 a dos valores exactos, `--pantalla` y
+  `--fosforo`, dibujada en un buffer pequeño y escalada con
+  `imageSmoothingEnabled = false`. El píxel gordo es parte del estilo.
+- El grano de trama se mide en píxeles de pantalla, no en píxeles del mundo:
+  la trama se queda pegada al cristal, no a los objetos.
 
 ## Calibración
 

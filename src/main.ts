@@ -2,6 +2,8 @@
 // ponytail: motor botánico, CLI y estado compartido llegan en las fases 2, 4 y 6.
 
 import { ahora } from "./tiempo";
+import { montarJardin } from "./jardin";
+import type { Planta } from "./jardin";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -52,3 +54,19 @@ $("muestra")?.addEventListener("click", () => {
   const siguiente = CHASIS[(CHASIS.indexOf(actual as never) + 1) % CHASIS.length]!;
   document.documentElement.dataset["chasis"] = siguiente;
 });
+
+/* ─── el motor botánico: siembra de ejemplo para la fase 2 ──── */
+
+const PLANTAS_DEMO: Planta[] = [
+  { slug: "beca-erasmus", vigor: 0.35, x: 0.06 },
+  { slug: "primer-trabajo", vigor: 0.72, x: 0.2 },
+  { slug: "proyecto-freelance", vigor: 0.5, x: 0.36 },
+  { slug: "curso-de-rust", vigor: 0.18, x: 0.5 },
+  { slug: "startup-fallida", vigor: 0.12, x: 0.62 },
+  { slug: "master-en-datos", vigor: 0.86, x: 0.78 },
+  { slug: "contribucion-open-source", vigor: 0.95, x: 0.92 },
+];
+
+const jardin = $("jardin") as HTMLCanvasElement | null;
+const desbordes = $("desbordes") as HTMLCanvasElement | null;
+if (jardin && desbordes) montarJardin(jardin, desbordes, PLANTAS_DEMO);
