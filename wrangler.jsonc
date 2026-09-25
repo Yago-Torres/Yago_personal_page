@@ -2,5 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ytg-01",
   "compatibility_date": "2026-09-26",
-  "assets": { "directory": "./dist" }
+  "assets": { "directory": "./dist" },
+  // Requiere haber quitado antes los dominios personalizados del proyecto de Pages,
+  // si no el deploy falla diciendo que el hostname ya está en uso.
+  "routes": [
+    { "pattern": "yagotg.dev", "custom_domain": true },
+    { "pattern": "www.yagotg.dev", "custom_domain": true }
+  ]
 }

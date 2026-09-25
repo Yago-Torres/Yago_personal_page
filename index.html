@@ -3,11 +3,86 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>YTG-01</title>
+    <title>YTG-01 · consola de cultivo</title>
+    <meta name="description" content="Un jardín compartido donde las plantas son proyectos. yagotg.dev" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <main><p>YTG-01 · sustrato preparado</p></main>
+    <main class="aparato">
+      <header class="cabecera">
+        <div>
+          <div class="modelo">YTG<b>-01</b></div>
+          <div class="serigrafia">consola de cultivo · yagotg.dev</div>
+        </div>
+        <div class="cabecera__dcha">
+          <span class="serigrafia" id="reloj">--:--</span>
+          <span class="led" role="status" aria-label="sistema activo"></span>
+        </div>
+      </header>
+
+      <section class="pantalla" aria-label="el jardín">
+        <div class="pantalla__estado">
+          <span id="estacion">otoño</span>
+          <span id="meteo">despejado</span>
+        </div>
+        <div class="pantalla__vacia">
+          <div>sin señal</div>
+          <div>el motor botánico llega en la fase 2</div>
+        </div>
+      </section>
+
+      <section class="instrumentos" aria-label="lecturas">
+        <div class="lectura" data-n="01">
+          <span class="serigrafia">sustrato</span>
+          <span class="lectura__valor">62<small>%</small></span>
+        </div>
+        <div class="lectura" data-n="02">
+          <span class="serigrafia">luz</span>
+          <span class="lectura__valor">18<small>%</small></span>
+        </div>
+        <div class="lectura" data-n="03">
+          <span class="serigrafia">riegos hoy</span>
+          <span class="lectura__valor">47</span>
+        </div>
+        <div class="lectura" data-n="04">
+          <span class="serigrafia">especies</span>
+          <span class="lectura__valor">9</span>
+        </div>
+      </section>
+
+      <section class="consola">
+        <p class="consola__log">sustrato preparado. escribe <b>ayuda</b> para empezar.</p>
+        <div class="consola__linea">
+          <span class="consola__prompt" aria-hidden="true">&gt;</span>
+          <input
+            class="consola__entrada"
+            id="entrada"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="consola de riego"
+            placeholder="mirar" />
+        </div>
+      </section>
+
+      <footer class="pie">
+        <div class="maestro">
+          <button class="maestro__boton" type="button" aria-label="activar sonido" aria-pressed="false">▶</button>
+          <div class="maestro__estado">
+            <span class="serigrafia">mezcla</span>
+            <span class="niveles" role="presentation"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <div class="rejilla" role="presentation"></div>
+        </div>
+        <div class="controles">
+          <button class="boton" type="button">excavar</button>
+          <div class="dial" role="presentation"></div>
+          <span class="serigrafia">rev 0.1 · fase 1</span>
+          <button class="boton boton--redondo" type="button" aria-label="ayuda">?</button>
+        </div>
+      </footer>
+    </main>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

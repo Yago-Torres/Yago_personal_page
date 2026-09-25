@@ -1,10 +1,321 @@
-:root { color-scheme: dark; }
+/* YTG-01 — sistema de diseño
+   Regla madre: el chasis tiene color, la pantalla es de 1 bit.
+   Capa 1 marco = hardware · capa 2 interfaz = blueprint · capa 3 lo vivo = tramado */
+
+:root {
+  /* chasis: plástico moldeado, cálido */
+  --chasis:        #dedbd4;
+  --chasis-alto:   #efece5;
+  --chasis-bajo:   #c3bfb5;
+  --surco:         #b4afa3;
+
+  /* serigrafía */
+  --tinta:         #1b1a18;
+  --tinta-tenue:   #8b8579;
+
+  /* acentos: tres, ni uno más */
+  --naranja:       #ff4f1f;
+  --verde:         #5fb14e;
+  --azul:          #2f6fe4;
+
+  /* pantalla: monocroma siempre */
+  --pantalla:      #0e120d;
+  --fosforo:       #c6e4be;
+  --reticula:      #c6e4be1a;
+
+  --paso:          8px;   /* toda la retícula es múltiplo de esto */
+  --radio:         10px;
+
+  --tipo-chasis:   system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --tipo-pantalla: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
-  min-height: 100dvh;
+  height: 100dvh;
+  padding: calc(var(--paso) * 3);
   display: grid;
   place-items: center;
-  background: #0d1117;
-  color: #7d8a99;
-  font: 400 14px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  overflow: hidden;
+  background: #b9b5ab;
+  font-family: var(--tipo-chasis);
+  color: var(--tinta);
+}
+
+/* ─── el aparato ────────────────────────────────────────────── */
+
+.aparato {
+  width: min(960px, 100%);
+  height: min(100%, 860px);
+  display: grid;
+  /* el visor se come el espacio sobrante: el aparato nunca desborda la ventana */
+  grid-template-rows: auto minmax(180px, 1fr) auto auto auto;
+  gap: calc(var(--paso) * 2);
+  padding: calc(var(--paso) * 2);
+  border-radius: calc(var(--radio) * 1.6);
+  background: var(--chasis);
+  box-shadow:
+    inset 0 1px 0 var(--chasis-alto),
+    inset 0 -2px 0 var(--chasis-bajo),
+    0 2px 0 var(--surco),
+    0 18px 40px #0000002e;
+}
+
+/* etiqueta serigrafiada: mayúsculas diminutas muy espaciadas */
+.serigrafia {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+/* ─── cabecera ──────────────────────────────────────────────── */
+
+.cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--paso);
+  padding-inline: calc(var(--paso) / 2);
+}
+
+.modelo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.modelo b { color: var(--naranja); font-weight: 800; }
+
+.cabecera__dcha { display: flex; align-items: center; gap: var(--paso); }
+
+.led {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--verde);
+  box-shadow: 0 0 6px var(--verde), inset 0 1px 1px #ffffff80;
+  animation: latido 4s ease-in-out infinite;
+}
+@keyframes latido { 50% { opacity: .45; } }
+
+/* ─── pantalla ──────────────────────────────────────────────── */
+
+.pantalla {
+  position: relative;
+  min-height: 0;
+  border-radius: var(--radio);
+  background:
+    repeating-linear-gradient(to right,  var(--reticula) 0 1px, #0000 1px calc(var(--paso) * 3)),
+    repeating-linear-gradient(to bottom, var(--reticula) 0 1px, #0000 1px calc(var(--paso) * 3)),
+    var(--pantalla);
+  box-shadow: inset 0 3px 10px #000000b3, 0 1px 0 var(--chasis-alto);
+  overflow: hidden;
+  color: var(--fosforo);
+  font-family: var(--tipo-pantalla);
+}
+
+/* marcas de esquina: blueprint */
+.pantalla::before,
+.pantalla::after {
+  content: "";
+  position: absolute;
+  width: calc(var(--paso) * 2);
+  height: calc(var(--paso) * 2);
+  border: 1px solid #c6e4be59;
+}
+.pantalla::before { top: var(--paso); left: var(--paso); border-right: 0; border-bottom: 0; }
+.pantalla::after { bottom: var(--paso); right: var(--paso); border-left: 0; border-top: 0; }
+
+.pantalla__estado {
+  position: absolute;
+  inset: var(--paso) var(--paso) auto auto;
+  display: flex;
+  gap: calc(var(--paso) * 1.5);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .72;
+}
+
+.pantalla__vacia {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: calc(var(--paso) / 2);
+  text-align: center;
+  font-size: 11px;
+  opacity: .5;
+}
+
+/* ─── instrumentos ──────────────────────────────────────────── */
+
+.instrumentos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--surco);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.lectura {
+  position: relative;
+  background: var(--chasis-alto);
+  padding: calc(var(--paso) * 1.25) var(--paso);
+  display: grid;
+  gap: 2px;
+}
+/* numeración serigrafiada, firma del aparato */
+.lectura::after {
+  content: attr(data-n);
+  position: absolute;
+  top: calc(var(--paso) * 1.25);
+  right: var(--paso);
+  font-family: var(--tipo-pantalla);
+  font-size: 9px;
+  color: var(--surco);
+}
+.lectura__valor {
+  font-family: var(--tipo-pantalla);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.lectura__valor small { font-size: 11px; color: var(--tinta-tenue); }
+
+/* ─── consola ───────────────────────────────────────────────── */
+
+.consola {
+  border-radius: var(--radio);
+  background: var(--pantalla);
+  box-shadow: inset 0 2px 8px #000000a6;
+  padding: calc(var(--paso) * 1.5);
+  font-family: var(--tipo-pantalla);
+  font-size: 13px;
+  color: var(--fosforo);
+  display: grid;
+  gap: calc(var(--paso) / 2);
+}
+.consola__log { margin: 0; opacity: .6; min-height: 1.5em; }
+.consola__linea { display: flex; gap: var(--paso); align-items: center; }
+.consola__prompt { color: var(--naranja); }
+.consola__entrada {
+  flex: 1;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.consola__entrada:focus { outline: none; }
+.consola__entrada::placeholder { color: #c6e4be4d; }
+
+/* ─── pie: controles físicos ────────────────────────────────── */
+
+/* el botón grande: la firma del aparato */
+.maestro {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--paso) * 1.5);
+}
+.maestro__boton {
+  width: 56px; height: 56px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--naranja);
+  color: #fff;
+  font-size: 18px;
+  display: grid; place-items: center;
+  box-shadow: 0 3px 0 #b33413, inset 0 2px 3px #ffffff40;
+}
+.maestro__boton:active { transform: translateY(2px); box-shadow: 0 1px 0 #b33413; }
+.maestro__boton:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; }
+.maestro__estado { display: grid; gap: 3px; }
+/* barras de nivel, se rellenan con el número de capas sonando */
+.niveles { display: flex; gap: 3px; }
+.niveles i {
+  width: 9px; height: 4px;
+  border-radius: 1px;
+  background: var(--surco);
+}
+.niveles i.on { background: var(--verde); }
+
+/* rejilla de altavoz troquelada */
+.rejilla {
+  width: 56px; height: 34px;
+  border-radius: 5px;
+  background-image: radial-gradient(var(--surco) 1.1px, #0000 1.2px);
+  background-size: 7px 7px;
+  box-shadow: inset 0 1px 2px #0000001f;
+}
+
+.pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--paso);
+  padding-inline: calc(var(--paso) / 2);
+}
+.controles { display: flex; align-items: center; gap: var(--paso); }
+
+.boton {
+  border: 0;
+  cursor: pointer;
+  font-family: var(--tipo-chasis);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--chasis-alto);
+  background: var(--tinta);
+  padding: calc(var(--paso) * .75) calc(var(--paso) * 1.5);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 #00000059;
+}
+.boton:active { transform: translateY(1px); box-shadow: 0 1px 0 #00000059; }
+.boton--naranja { background: var(--naranja); color: #fff; }
+.boton--redondo {
+  width: 34px; height: 34px;
+  padding: 0;
+  display: grid; place-items: center;
+  font-size: 13px;
+  background: var(--azul); color: #fff;
+}
+.boton:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; }
+
+/* dial */
+.dial {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, var(--chasis-alto), var(--chasis-bajo));
+  box-shadow: 0 2px 0 var(--surco), inset 0 0 0 1px #0000001a;
+  position: relative;
+}
+.dial::after {
+  content: "";
+  position: absolute;
+  top: 5px; left: 50%;
+  width: 2px; height: 9px;
+  translate: -50% 0;
+  background: var(--tinta);
+  border-radius: 1px;
+}
+
+/* aparato mas alto que la ventana: solo ahi dejamos scroll de pagina */
+@media (max-width: 560px), (max-height: 620px) {
+  body { height: auto; min-height: 100dvh; overflow: visible; padding: var(--paso); }
+  .aparato { height: auto; grid-template-rows: none; }
+  .pantalla { aspect-ratio: 4 / 3; }
+  .instrumentos { grid-template-columns: repeat(2, 1fr); }
+  .modelo { font-size: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; }
 }
