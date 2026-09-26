@@ -115,6 +115,14 @@ funcionar en los dos turnos, así que siempre va como token.
 - Toda constante que afecte a lo que se ve va en `CALIBRACION`, en mayúsculas,
   arriba del módulo, con un comentario de una línea diciendo qué pasa si sube.
 
+## /aitana
+
+Hay una página escondida en `aitana/index.html`: un minimundo con una chica y
+un gato gris, sin currículum ni nada que leer. **A ella se llega solo
+escribiendo la dirección.** No la enlaces nunca desde la portada, no la metas
+en ningún menú ni sitemap, y déjale su `noindex`. Si dejas de cumplir eso,
+deja de ser lo que es.
+
 ## Regla de contenido, dura
 
 Las etapas profesionales **nunca** llevan nombres de cliente ni de proyecto
