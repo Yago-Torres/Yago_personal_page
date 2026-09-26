@@ -3,16 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>YTG-01 · prototipo de dirección visual</title>
+    <title>YTG-01 · consola de cultivo</title>
+    <meta name="description" content="Un jardín donde las plantas son mi carrera. Yago Torres, yagotg.dev" />
     <style>
       :root {
         --tipo: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
         --tinta: #3f3a2f;
+        --pantalla: #141f1a;
+        --fosforo: #cfe8c4;
+        --coral: #ff6b4a;
         color-scheme: light;
       }
       * { box-sizing: border-box; }
-      body { margin: 0; overflow: hidden; background: #ffe6c9; font-family: var(--tipo); }
+      body { margin: 0; overflow: hidden; background: #bfe6f0; font-family: var(--tipo); }
       #lienzo { display: block; width: 100vw; height: 100dvh; }
+
+      /* ─── rótulo y lecturas ─── */
 
       .rotulo {
         position: fixed;
@@ -23,10 +29,29 @@
         text-transform: uppercase;
         color: var(--tinta);
         pointer-events: none;
+        text-shadow: 0 1px 2px #ffffff80;
       }
       .rotulo b { display: block; font-size: 15px; letter-spacing: -.01em; text-transform: none; }
 
-      /* etiqueta flotante de lo que hay bajo el puntero */
+      .lecturas {
+        position: fixed;
+        top: 20px;
+        right: 24px;
+        display: flex;
+        gap: 18px;
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        pointer-events: none;
+        text-shadow: 0 1px 2px #ffffff80;
+      }
+      .lecturas div { display: grid; gap: 3px; justify-items: end; }
+      .lecturas b { font-size: 14px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+      .lecturas span { opacity: .6; }
+
+      /* ─── etiqueta flotante ─── */
+
       #pista {
         position: fixed;
         left: 50%;
@@ -45,29 +70,72 @@
       }
       #pista.visible { opacity: 1; }
 
-      /* ficha que aparece al enfocar la pantalla */
+      /* ─── ficha ─── */
+
       #ficha {
         position: fixed;
-        right: 6vw;
+        right: 5vw;
         top: 50%;
         translate: 0 -50%;
-        width: min(340px, 40vw);
+        width: min(360px, 42vw);
+        max-height: 74vh;
+        overflow-y: auto;
         display: grid;
-        gap: 14px;
+        gap: 12px;
+        align-content: start;
         padding: 22px;
         border-radius: 14px;
         background: #141f1af2;
-        color: #cfe8c4;
+        color: var(--fosforo);
         font-size: 13px;
         line-height: 1.6;
         opacity: 0;
-        transition: opacity .3s, translate .3s;
+        transition: opacity .28s;
         pointer-events: none;
       }
       #ficha.visible { opacity: 1; pointer-events: auto; }
-      #ficha h2 { margin: 0; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; opacity: .6; font-weight: 600; }
-      #ficha ul { margin: 0; padding-left: 18px; }
-      #ficha .prompt { color: #ff9b7a; }
+      #ficha h2 {
+        margin: 0;
+        font-size: 11px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        opacity: .55;
+        font-weight: 600;
+      }
+      #ficha-cuerpo { display: grid; gap: 9px; }
+      #ficha p { margin: 0; }
+      #ficha b { color: #ffbfa6; font-weight: 600; }
+
+      /* ─── consola ─── */
+
+      #consola {
+        display: grid;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid #cfe8c426;
+      }
+      #consola-log {
+        display: grid;
+        gap: 4px;
+        max-height: 30vh;
+        overflow-y: auto;
+        font-size: 12px;
+        line-height: 1.55;
+        opacity: .82;
+      }
+      #consola-log .eco { color: #ffbfa6; opacity: .7; }
+      #consola .linea { display: flex; gap: 9px; align-items: center; }
+      #consola .prompt { color: #ffbfa6; }
+      #entrada {
+        flex: 1;
+        border: 0;
+        padding: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+      }
+      #entrada:focus { outline: none; }
+      #entrada::placeholder { color: #cfe8c440; }
 
       .boton {
         justify-self: start;
@@ -75,7 +143,7 @@
         cursor: pointer;
         padding: 8px 16px;
         border-radius: 999px;
-        background: #ff6b4a;
+        background: var(--coral);
         color: #fff;
         font-family: var(--tipo);
         font-size: 10px;
@@ -83,7 +151,8 @@
         text-transform: uppercase;
       }
 
-      /* cajón de ajustes */
+      /* ─── ajustes ─── */
+
       #abrir-ajustes {
         position: fixed;
         right: 20px;
@@ -127,9 +196,10 @@
       #mandos input { width: 100%; }
 
       @media (max-width: 720px) {
-        #ficha { right: 4vw; left: 4vw; width: auto; top: auto; bottom: 90px; translate: 0; }
+        #ficha { right: 4vw; left: 4vw; width: auto; top: auto; bottom: 86px; translate: 0; max-height: 46vh; }
         #ajustes { left: 20px; }
         #mandos label { grid-template-columns: 1fr 1fr 30px; }
+        .lecturas { gap: 12px; }
       }
     </style>
   </head>
@@ -138,24 +208,37 @@
 
     <div class="rotulo">
       <b>YTG-01</b>
-      prototipo · pulsa la pantalla
+      consola de cultivo · zaragoza
+    </div>
+
+    <div class="lecturas">
+      <div><b id="lectura-hora">--:--</b><span>hora</span></div>
+      <div><b id="lectura-temperatura">--º</b><span>exterior</span></div>
+      <div><b id="lectura-meteo">—</b><span>cielo</span></div>
+      <div><b id="lectura-estacion">—</b><span>estación</span></div>
     </div>
 
     <div id="pista"></div>
 
     <div id="ficha">
-      <h2>consola de riego</h2>
-      <p style="margin:0">
-        aquí vivirá el jardín: la pantalla de 1 bit y la línea de comandos.
-        de momento esto es una maqueta para ver el movimiento de cámara.
-      </p>
-      <ul>
-        <li>mirar</li>
-        <li>regar &lt;planta&gt;</li>
-        <li>abrir &lt;planta&gt;</li>
-        <li>excavar</li>
-      </ul>
-      <p style="margin:0"><span class="prompt">&gt;</span> _</p>
+      <h2 id="ficha-titulo">consola de riego</h2>
+      <div id="ficha-cuerpo"></div>
+
+      <div id="consola">
+        <div id="consola-log" aria-live="polite"></div>
+        <div class="linea">
+          <span class="prompt" aria-hidden="true">&gt;</span>
+          <input
+            id="entrada"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="consola de riego"
+            placeholder="ayuda" />
+        </div>
+      </div>
+
       <button class="boton" id="volver" type="button">salir · esc</button>
     </div>
 

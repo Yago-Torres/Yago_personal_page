@@ -1,11 +1,11 @@
-// Prototipo 3 de dirección visual: diorama low-poly con el aparato en el centro,
-// superficie de mandos densa y pantalla enfocable.
+// El diorama: isla flotante, aparato y jardín.
 //
-// La isla flotante no es decoración: su corte es la estructura del CV.
-// Arriba el presente (aparato y plantas), abajo los estratos del stack.
+// La isla no es decoración: su corte es la estructura del CV. Arriba el
+// presente (el aparato, los árboles de cada etapa y los arbustos de los
+// proyectos propios), en la línea del suelo las etiquetas de certificación,
+// y abajo los estratos del stack.
 
 import {
-  CanvasTexture,
   Color,
   CylinderGeometry,
   DirectionalLight,
@@ -19,10 +19,14 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
+  ShadowMaterial,
   SphereGeometry,
   Vector3,
 } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { ARBOLES, ARBUSTOS, ESTRATOS, ETIQUETAS } from "../jardin-datos";
+import { plantaDe } from "./botanica3d";
+import { montarCielo, type Luces } from "./cielo";
 
 export const CALIBRACION = {
   // Distancia de la cámara en la vista general. Subirlo aleja y aplana.
@@ -35,11 +39,12 @@ export const CALIBRACION = {
   GIRO: 2.2,
   // Grados de balanceo que añade el puntero.
   PARALAJE: 6,
+  // Escala de los árboles de etapa frente a los arbustos de proyecto.
+  ESCALA_ARBOL: 5.2,
+  ESCALA_ARBUSTO: 2.7,
 };
 
 const PALETA = {
-  cieloAlto: "#bfe6f0",
-  cieloBajo: "#ffe6c9",
   chasis:    "#f6f1e4",
   pantalla:  "#141f1a",
   coral:     "#ff6b4a",
@@ -47,70 +52,72 @@ const PALETA = {
   amarillo:  "#f5c451",
   violeta:   "#8a6fc4",
   grafito:   "#3b3a35",
-  corteza:   "#9a6f45",
+  corteza:   "#8a6340",
   hoja:      "#5fbe4e",
   hojaClara: "#8fd86a",
+  etiqueta:  "#efe9d8",
 };
 
-// El stack, de la superficie a la roca madre. En producción sale de jardin-datos.ts.
-const ESTRATOS = [
-  { alto: 0.40, radio: 5.3, color: "#74c65a" }, // césped
-  { alto: 0.60, radio: 5.15, color: "#e7b955" },
-  { alto: 0.52, radio: 4.72, color: "#e08a4e" },
-  { alto: 0.70, radio: 4.18, color: "#d2605f" },
-  { alto: 0.62, radio: 3.46, color: "#9a5f9c" },
-  { alto: 0.92, radio: 2.62, color: "#4f7fb8" },
-  { alto: 1.15, radio: 1.70, color: "#3a5c86" },
-];
+/** Un color por estrato, del césped a la roca madre. */
+const TONOS_ESTRATO = ["#e7b955", "#e08a4e", "#d2605f", "#b0567f", "#9a5f9c", "#6a6fb0", "#4f7fb8", "#3a5c86"];
 
 const ARRIBA = new Vector3(0, 1, 0);
 
-/** Malla sobre la que se puede hacer clic. */
 export type Interactivo = {
-  malla: Mesh;
+  malla: Object3D;
   nombre: string;
   etiqueta: string;
-  alturaBase: number;
+  /** slug del contenido, si lo tiene */
+  slug?: string;
 };
 
-function cielo() {
-  const c = document.createElement("canvas");
-  c.width = 2;
-  c.height = 256;
-  const ctx = c.getContext("2d")!;
-  const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, PALETA.cieloAlto);
-  grad.addColorStop(1, PALETA.cieloBajo);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 2, 256);
-  return new CanvasTexture(c);
-}
+/* ─── la isla ───────────────────────────────────────────────── */
+
+const ALTO_CESPED = 0.4;
 
 function isla() {
   const g = new Group();
-  let y = 0;
+  const radioTope = 5.3;
 
-  for (const capa of ESTRATOS) {
-    const geo = new CylinderGeometry(capa.radio, capa.radio * 0.82, capa.alto, 6);
-    const mat = new MeshStandardMaterial({
-      color: new Color(capa.color),
-      roughness: 0.92,
-      flatShading: true,
-    });
-    const m = new Mesh(geo, mat);
-    m.position.y = y - capa.alto / 2;
+  const cesped = new Mesh(
+    new CylinderGeometry(radioTope, radioTope * 0.97, ALTO_CESPED, 6),
+    new MeshStandardMaterial({ color: new Color("#74c65a"), roughness: 0.92, flatShading: true }),
+  );
+  cesped.position.y = -ALTO_CESPED / 2;
+  cesped.rotation.y = 0.26;
+  cesped.castShadow = true;
+  cesped.receiveShadow = true;
+  g.add(cesped);
+
+  // un estrato por tecnología del stack: el grosor es su peso
+  let y = -ALTO_CESPED;
+  let radio = radioTope * 0.97;
+  ESTRATOS.forEach((estrato, i) => {
+    const alto = 0.3 + estrato.peso * 0.22;
+    const siguiente = radio * (0.9 - i * 0.012);
+    const m = new Mesh(
+      new CylinderGeometry(radio, siguiente, alto, 6),
+      new MeshStandardMaterial({
+        color: new Color(TONOS_ESTRATO[i % TONOS_ESTRATO.length]!),
+        roughness: 0.94,
+        flatShading: true,
+      }),
+    );
+    m.position.y = y - alto / 2;
     m.rotation.y = 0.26;
     m.castShadow = true;
     m.receiveShadow = true;
+    m.userData["estrato"] = estrato.slug;
     g.add(m);
-    y -= capa.alto;
-  }
+    y -= alto;
+    radio = siguiente;
+  });
 
   const punta = new Mesh(
-    new CylinderGeometry(1.70, 0.1, 2.1, 6),
-    new MeshStandardMaterial({ color: new Color("#31507a"), roughness: 1, flatShading: true }),
+    new CylinderGeometry(radio, 0.1, 2.0, 6),
+    new MeshStandardMaterial({ color: new Color("#2f4a70"), roughness: 1, flatShading: true }),
   );
-  punta.position.y = y - 1.05;
+  punta.position.y = y - 1.0;
   punta.rotation.y = 0.26;
   punta.castShadow = true;
   g.add(punta);
@@ -118,84 +125,95 @@ function isla() {
   return g;
 }
 
-function segmento(g: Group, mat: MeshStandardMaterial, a: Vector3, b: Vector3, grosor: number) {
-  const largo = a.distanceTo(b);
-  const m = new Mesh(new CylinderGeometry(grosor * 0.72, grosor, largo, 5), mat);
-  m.position.copy(a).add(b).multiplyScalar(0.5);
-  m.quaternion.setFromUnitVectors(ARRIBA, b.clone().sub(a).normalize());
-  m.castShadow = true;
-  g.add(m);
-}
+/* ─── plantas ───────────────────────────────────────────────── */
 
-/** Rama recursiva. En producción la geometría la genera botanica.ts. */
-function rama(
-  g: Group,
-  mat: MeshStandardMaterial,
-  matHoja: MeshStandardMaterial,
-  base: Vector3,
-  dir: Vector3,
-  largo: number,
-  grosor: number,
-  nivel: number,
-) {
-  const punta = base.clone().addScaledVector(dir, largo);
-  segmento(g, mat, base, punta, grosor);
+const matCorteza = new MeshStandardMaterial({
+  color: new Color(PALETA.corteza),
+  roughness: 0.95,
+  flatShading: true,
+});
 
-  if (nivel >= 2) {
-    const hoja = new Mesh(new IcosahedronGeometry(grosor * (6.2 - nivel * 1.1), 0), matHoja);
-    hoja.position.copy(punta);
-    hoja.scale.y = 0.78;
-    hoja.castShadow = true;
-    g.add(hoja);
-    if (nivel >= 3) return;
-  }
-
-  const eje = new Vector3(-dir.z, 0, dir.x).normalize();
-  for (const signo of [1, -1]) {
-    const hija = dir
-      .clone()
-      .applyAxisAngle(eje, signo * (0.62 - nivel * 0.08))
-      .applyAxisAngle(ARRIBA, signo * 1.1)
-      .lerp(ARRIBA, 0.12)
-      .normalize();
-    rama(g, mat, matHoja, punta, hija, largo * 0.68, grosor * 0.7, nivel + 1);
-  }
-}
-
-function planta(altura: number, claro: boolean) {
+function construirPlanta(slug: string, vigor: number, escala: number, claro: boolean) {
   const g = new Group();
-  const mat = new MeshStandardMaterial({
-    color: new Color(PALETA.corteza),
-    roughness: 0.95,
-    flatShading: true,
-  });
   const matHoja = new MeshStandardMaterial({
     color: new Color(claro ? PALETA.hojaClara : PALETA.hoja),
-    roughness: 0.8,
+    roughness: 0.82,
     flatShading: true,
   });
-  rama(g, mat, matHoja, new Vector3(0, 0, 0), ARRIBA.clone(), altura * 0.34, altura * 0.095, 0);
+
+  for (const r of plantaDe(slug, vigor, escala)) {
+    const largo = r.a.distanceTo(r.b);
+    if (largo < 1e-4) continue;
+
+    const tallo = new Mesh(
+      new CylinderGeometry(r.grosor * 0.72, r.grosor, largo, 5),
+      matCorteza,
+    );
+    tallo.position.copy(r.a).add(r.b).multiplyScalar(0.5);
+    tallo.quaternion.setFromUnitVectors(ARRIBA, r.b.clone().sub(r.a).normalize());
+    tallo.castShadow = true;
+    g.add(tallo);
+
+    if (r.hoja) {
+      const hoja = new Mesh(new IcosahedronGeometry(r.grosor * 5.4, 0), matHoja);
+      hoja.position.copy(r.b);
+      hoja.scale.y = 0.72;
+      hoja.castShadow = true;
+      g.add(hoja);
+    }
+  }
+
+  return g;
+}
+
+/** Vigor de una etapa: cuenta el tiempo, pero lo vivo pesa más que lo largo. */
+function vigorEtapa(desde: string, hasta?: string) {
+  const ini = new Date(`${desde}-01T00:00:00Z`).getTime();
+  const fin = hasta ? new Date(`${hasta}-01T00:00:00Z`).getTime() : Date.now();
+  const meses = Math.max((fin - ini) / (1000 * 60 * 60 * 24 * 30.4), 0);
+  const vivo = hasta ? 0 : 0.35;
+  return Math.min(0.2 + meses / 26 + vivo, 1);
+}
+
+/* ─── etiquetas de certificación ────────────────────────────── */
+
+function etiquetaDeVivero(pendiente: boolean) {
+  const g = new Group();
+
+  const palo = new Mesh(
+    new CylinderGeometry(0.035, 0.035, 0.62, 6),
+    new MeshStandardMaterial({ color: new Color("#cfc7b2"), roughness: 0.9, flatShading: true }),
+  );
+  palo.position.y = 0.31;
+  palo.castShadow = true;
+  g.add(palo);
+
+  const placa = new Mesh(
+    new RoundedBoxGeometry(0.62, 0.36, 0.035, 2, 0.05),
+    new MeshStandardMaterial({
+      color: new Color(PALETA.etiqueta),
+      roughness: pendiente ? 1 : 0.6,
+      flatShading: true,
+    }),
+  );
+  placa.position.y = 0.7;
+  placa.castShadow = true;
+  g.add(placa);
+
+  // una pendiente va en blanco y ladeada: todavía no se ha clavado del todo
+  if (pendiente) g.rotation.z = 0.16;
+
   return g;
 }
 
 /* ─── el aparato ────────────────────────────────────────────── */
 
 const GROSOR_CHASIS = 0.54;
-const CARA = GROSOR_CHASIS / 2;   // altura de la cara superior, en local
+const CARA = GROSOR_CHASIS / 2;
 
-function tapa(color: string, rugosidad = 0.45) {
-  return new MeshStandardMaterial({ color: new Color(color), roughness: rugosidad, flatShading: true });
-}
+const tapa = (color: string, rugosidad = 0.45) =>
+  new MeshStandardMaterial({ color: new Color(color), roughness: rugosidad, flatShading: true });
 
-/** Botón redondo. */
-function pulsador(x: number, z: number, radio: number, alto: number, color: string) {
-  const m = new Mesh(new CylinderGeometry(radio, radio, alto, 14), tapa(color));
-  m.position.set(x, CARA + alto / 2 - 0.02, z);
-  m.castShadow = true;
-  return m;
-}
-
-/** Tecla cuadrada de las del teclado numérico. */
 function tecla(x: number, z: number, lado: number, color: string) {
   const m = new Mesh(new RoundedBoxGeometry(lado, 0.1, lado, 2, 0.022), tapa(color));
   m.position.set(x, CARA + 0.04, z);
@@ -203,13 +221,9 @@ function tecla(x: number, z: number, lado: number, color: string) {
   return m;
 }
 
-/** Perilla con su marca de posición. */
 function perilla(x: number, z: number, radio: number) {
   const g = new Group();
-  const cuerpo = new Mesh(
-    new CylinderGeometry(radio, radio * 1.06, 0.2, 12),
-    tapa(PALETA.grafito, 0.38),
-  );
+  const cuerpo = new Mesh(new CylinderGeometry(radio, radio * 1.06, 0.2, 12), tapa(PALETA.grafito, 0.38));
   cuerpo.castShadow = true;
   g.add(cuerpo);
   const marca = new Mesh(
@@ -223,11 +237,13 @@ function perilla(x: number, z: number, radio: number) {
   return g;
 }
 
+/** Los seis comandos de la tira de teclas, en orden. */
+export const TECLAS = ["mirar", "regar", "plantar", "excavar", "etiquetas", "historia"] as const;
+
 function aparato() {
   const g = new Group();
   const interactivos: Interactivo[] = [];
 
-  // cuerpo: plástico translúcido mate
   const cuerpo = new Mesh(
     new RoundedBoxGeometry(5.0, GROSOR_CHASIS, 3.0, 4, 0.2),
     new MeshPhysicalMaterial({
@@ -244,15 +260,10 @@ function aparato() {
   cuerpo.receiveShadow = true;
   g.add(cuerpo);
 
-  // marco hundido de la pantalla
-  const hueco = new Mesh(
-    new RoundedBoxGeometry(2.5, 0.1, 1.8, 2, 0.05),
-    tapa("#d8d2c2", 0.7),
-  );
+  const hueco = new Mesh(new RoundedBoxGeometry(2.5, 0.1, 1.8, 2, 0.05), tapa("#d8d2c2", 0.7));
   hueco.position.set(-1.05, CARA - 0.02, -0.1);
   g.add(hueco);
 
-  // la pantalla: esto es lo enfocable
   const pantalla = new Mesh(
     new RoundedBoxGeometry(2.3, 0.1, 1.6, 2, 0.04),
     new MeshStandardMaterial({ color: new Color(PALETA.pantalla), roughness: 0.22, metalness: 0.15 }),
@@ -260,80 +271,56 @@ function aparato() {
   pantalla.position.set(-1.05, CARA + 0.015, -0.1);
   pantalla.name = "pantalla";
   g.add(pantalla);
-  interactivos.push({
-    malla: pantalla,
-    nombre: "pantalla",
-    etiqueta: "entrar en el jardín",
-    alturaBase: pantalla.position.y,
-  });
+  interactivos.push({ malla: pantalla, nombre: "pantalla", etiqueta: "entrar en el jardín" });
 
-  // tira de teclas bajo la pantalla
   const tonos = [PALETA.coral, PALETA.turquesa, PALETA.amarillo, PALETA.violeta];
-  for (let i = 0; i < 6; i++) {
+  TECLAS.forEach((comando, i) => {
     const t = tecla(-2.0 + i * 0.38, 1.12, 0.3, tonos[i % 4]!);
     g.add(t);
-    interactivos.push({
-      malla: t,
-      nombre: `tecla-${i}`,
-      etiqueta: ["mirar", "regar", "plantar", "excavar", "etiquetas", "historia"][i]!,
-      alturaBase: t.position.y,
-    });
-  }
+    interactivos.push({ malla: t, nombre: `comando:${comando}`, etiqueta: comando });
+  });
 
-  // retícula de pulsadores a la derecha
   for (let fila = 0; fila < 2; fila++) {
     for (let col = 0; col < 3; col++) {
-      const b = tecla(0.55 + col * 0.42, -0.95 + fila * 0.42, 0.33, fila + col === 0 ? PALETA.amarillo : "#e3ded0");
+      const b = tecla(0.55 + col * 0.42, -0.95 + fila * 0.42, 0.33, "#e3ded0");
       g.add(b);
-      interactivos.push({
-        malla: b,
-        nombre: `mando-${fila}-${col}`,
-        etiqueta: "mando",
-        alturaBase: b.position.y,
-      });
+      interactivos.push({ malla: b, nombre: `mando-${fila}-${col}`, etiqueta: "mando" });
     }
   }
 
-  // perillas
   g.add(perilla(2.05, -0.85, 0.3));
   g.add(perilla(1.5, -0.85, 0.2));
 
-  // botón maestro
-  const maestro = pulsador(2.0, 0.42, 0.42, 0.22, PALETA.coral);
+  const maestro = new Mesh(new CylinderGeometry(0.42, 0.42, 0.22, 14), tapa(PALETA.coral));
+  maestro.position.set(2.0, CARA + 0.09, 0.42);
+  maestro.castShadow = true;
   g.add(maestro);
-  interactivos.push({
-    malla: maestro,
-    nombre: "maestro",
-    etiqueta: "sonido",
-    alturaBase: maestro.position.y,
-  });
+  interactivos.push({ malla: maestro, nombre: "comando:sonido", etiqueta: "sonido" });
 
-  // rejilla de altavoz troquelada
   for (let fx = 0; fx < 6; fx++) {
     for (let fz = 0; fz < 3; fz++) {
-      const hoyo = new Mesh(
-        new CylinderGeometry(0.045, 0.045, 0.06, 8),
-        tapa("#c9c3b2", 0.9),
-      );
+      const hoyo = new Mesh(new CylinderGeometry(0.045, 0.045, 0.06, 8), tapa("#c9c3b2", 0.9));
       hoyo.position.set(0.62 + fx * 0.13, CARA - 0.01, 0.75 + fz * 0.13);
       g.add(hoyo);
     }
   }
 
-  // leds de estado en el borde superior
-  const leds = ["#7ddc5a", PALETA.amarillo, PALETA.coral];
-  leds.forEach((c, i) => {
-    const led = new Mesh(new SphereGeometry(0.055, 8, 6), new MeshStandardMaterial({
-      color: new Color(c),
-      emissive: new Color(c),
-      emissiveIntensity: 0.6,
-      roughness: 0.3,
-    }));
+  const leds: Mesh[] = [];
+  ["#7ddc5a", PALETA.amarillo, PALETA.coral].forEach((c, i) => {
+    const led = new Mesh(
+      new SphereGeometry(0.055, 8, 6),
+      new MeshStandardMaterial({
+        color: new Color(c),
+        emissive: new Color(c),
+        emissiveIntensity: 0.6,
+        roughness: 0.3,
+      }),
+    );
     led.position.set(1.4 + i * 0.2, CARA + 0.02, -1.22);
     g.add(led);
+    leds.push(led);
   });
 
-  // fader
   const carril = new Mesh(new RoundedBoxGeometry(0.16, 0.06, 1.1, 1, 0.03), tapa("#cdc7b6", 0.8));
   carril.position.set(0.18, CARA - 0.005, -0.7);
   g.add(carril);
@@ -342,8 +329,10 @@ function aparato() {
   pomo.castShadow = true;
   g.add(pomo);
 
-  return { grupo: g, interactivos, pantalla };
+  return { grupo: g, interactivos, pantalla, leds };
 }
+
+/* ─── montaje ───────────────────────────────────────────────── */
 
 export function colocarCamara(camera: PerspectiveCamera, distancia: number, altura: number) {
   camera.position.set(distancia * 0.62, distancia * altura, distancia * 0.62);
@@ -352,9 +341,8 @@ export function colocarCamara(camera: PerspectiveCamera, distancia: number, altu
 
 export function construirEscena(anchoAlto: number) {
   const scene = new Scene();
-  scene.background = cielo();
 
-  const camera = new PerspectiveCamera(24, anchoAlto, 1, 100);
+  const camera = new PerspectiveCamera(24, anchoAlto, 1, 260);
   colocarCamara(camera, CALIBRACION.DISTANCIA, CALIBRACION.ALTURA);
 
   const diorama = new Group();
@@ -365,61 +353,94 @@ export function construirEscena(anchoAlto: number) {
   consola.grupo.position.y = 0.3;
   diorama.add(consola.grupo);
 
-  // las plantas se apartan del aparato, que ahora manda
-  const sitios: [number, number, number, boolean][] = [
-    [-4.3, 1.5, 1.5, false], [4.2, 1.7, -1.3, true], [-2.4, 1.2, -3.4, false],
-    [2.6, 1.4, 3.2, true], [-4.4, 1.3, -1.4, true], [0.2, 1.6, 3.7, false],
-    [4.4, 1.2, 1.1, false], [-0.6, 1.4, -3.8, true],
-  ];
-  for (const [x, alto, z, claro] of sitios) {
-    const p = planta(alto, claro);
-    p.position.set(x, 0.15, z);
-    diorama.add(p);
-  }
+  const interactivos: Interactivo[] = [...consola.interactivos];
 
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + 0.4;
+  // los árboles de cada etapa, repartidos por el borde para no tapar el aparato
+  const ANILLO_ARBOLES = 4.55;
+  ARBOLES.forEach((arbol, i) => {
+    const a = (i / ARBOLES.length) * Math.PI * 2 + 0.7;
+    const planta = construirPlanta(
+      arbol.slug,
+      vigorEtapa(arbol.desde, arbol.hasta),
+      CALIBRACION.ESCALA_ARBOL,
+      i % 2 === 0,
+    );
+    planta.position.set(Math.cos(a) * ANILLO_ARBOLES, 0, Math.sin(a) * ANILLO_ARBOLES);
+    diorama.add(planta);
+    interactivos.push({
+      malla: planta,
+      nombre: `planta:${arbol.slug}`,
+      etiqueta: `${arbol.nombre} · ${arbol.rol}`,
+      slug: arbol.slug,
+    });
+  });
+
+  // los arbustos de proyecto propio, más adentro y más pequeños
+  const ANILLO_ARBUSTOS = 3.15;
+  ARBUSTOS.forEach((arbusto, i) => {
+    const a = (i / ARBUSTOS.length) * Math.PI * 2 + 0.25;
+    const planta = construirPlanta(arbusto.slug, 0.55, CALIBRACION.ESCALA_ARBUSTO, i % 2 === 1);
+    planta.position.set(Math.cos(a) * ANILLO_ARBUSTOS, 0, Math.sin(a) * ANILLO_ARBUSTOS);
+    diorama.add(planta);
+    interactivos.push({
+      malla: planta,
+      nombre: `planta:${arbusto.slug}`,
+      etiqueta: arbusto.nombre,
+      slug: arbusto.slug,
+    });
+  });
+
+  // las etiquetas de certificación, en hilera a la altura del suelo
+  ETIQUETAS.forEach((cert, i) => {
+    const a = -0.9 + i * 0.22;
+    const e = etiquetaDeVivero(cert.estado === "pendiente");
+    e.position.set(Math.cos(a) * 4.85, 0, Math.sin(a) * 4.85);
+    e.rotation.y = -a + Math.PI / 2;
+    diorama.add(e);
+    interactivos.push({
+      malla: e,
+      nombre: `etiqueta:${cert.codigo}`,
+      etiqueta: `${cert.codigo} · ${cert.estado}`,
+      slug: cert.codigo,
+    });
+  });
+
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + 0.4;
     const piedra = new Mesh(
       new IcosahedronGeometry(0.08 + (i % 3) * 0.04, 0),
       new MeshStandardMaterial({ color: new Color("#b9a98c"), roughness: 1, flatShading: true }),
     );
-    piedra.position.set(Math.cos(a) * 4.6, 0.21, Math.sin(a) * 4.6);
+    piedra.position.set(Math.cos(a) * 4.9, 0.02, Math.sin(a) * 4.9);
     piedra.castShadow = true;
     diorama.add(piedra);
   }
 
-  const sombra = new Mesh(
-    new PlaneGeometry(60, 60),
-    new MeshStandardMaterial({ color: new Color(PALETA.cieloBajo), roughness: 1 }),
-  );
+  // suelo que solo recoge la sombra: sin material visible, para que no
+  // reaparezca el plano de fondo que afeaba la escena
+  const sombra = new Mesh(new PlaneGeometry(80, 80), new ShadowMaterial({ opacity: 0.16 }));
   sombra.rotation.x = -Math.PI / 2;
-  sombra.position.y = -6.5;
+  sombra.position.y = -7.5;
   sombra.receiveShadow = true;
   scene.add(sombra);
 
-  const key = new DirectionalLight(0xfff0d8, 2.6);
-  key.position.set(6, 9, 4);
-  key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
-  key.shadow.camera.left = -11;
-  key.shadow.camera.right = 11;
-  key.shadow.camera.top = 11;
-  key.shadow.camera.bottom = -11;
-  key.shadow.bias = -0.0008;
-  scene.add(key);
-
-  // rebote frío del cielo: sin esto la sombra sale negra y triste
-  const relleno = new DirectionalLight(0xbfe0ff, 1.5);
-  relleno.position.set(-7, 2, -5);
-  scene.add(relleno);
-
-  scene.add(new HemisphereLight(0xdcf2ff, 0xf0c98a, 1.6));
-
-  return {
-    scene,
-    camera,
-    diorama,
-    interactivos: consola.interactivos,
-    pantalla: consola.pantalla as Object3D,
+  const luces: Luces = {
+    sol: new DirectionalLight(0xfff0d8, 2.6),
+    relleno: new DirectionalLight(0xbfe0ff, 1.5),
+    ambiente: new HemisphereLight(0xdcf2ff, 0xf0c98a, 1.6),
   };
+  luces.sol.position.set(6, 9, 4);
+  luces.sol.castShadow = true;
+  luces.sol.shadow.mapSize.set(2048, 2048);
+  luces.sol.shadow.camera.left = -11;
+  luces.sol.shadow.camera.right = 11;
+  luces.sol.shadow.camera.top = 11;
+  luces.sol.shadow.camera.bottom = -11;
+  luces.sol.shadow.bias = -0.0008;
+  luces.relleno.position.set(-7, 2, -5);
+  scene.add(luces.sol, luces.relleno, luces.ambiente);
+
+  const cielo = montarCielo(scene, luces);
+
+  return { scene, camera, diorama, interactivos, cielo, leds: consola.leds };
 }
