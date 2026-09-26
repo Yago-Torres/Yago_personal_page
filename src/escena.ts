@@ -1,11 +1,8 @@
-// La azotea.
+// La azotea de Yago, que es medio estudio.
 //
-// Un trozo de tejado con un Yago diminuto que hace cosas según el tiempo que
-// haga de verdad en la ciudad elegida: riega las macetas si luce, saca el
-// paraguas si llueve y se pone a trabajar cuando cae la noche.
-//
-// Monocroma: todo vive en tonos de un mismo acento con la crema de contrapunto,
-// que es lo que la mantiene pegada a la página.
+// Hay escritorio, piano, guitarras, un micro de grabación, una cama y macetas.
+// Yago hace una cosa u otra según la hora, el día de la semana y el tiempo que
+// haga de verdad en la ciudad elegida. Y si pulsas un trasto, va y lo usa.
 
 import {
   AmbientLight,
@@ -19,41 +16,79 @@ import {
   LineSegments,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   PerspectiveCamera,
+  Raycaster,
   Scene,
   SphereGeometry,
-  TorusGeometry,
+  Vector2,
   WebGLRenderer,
 } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export const CALIBRACION = {
   // Distancia de la cámara. Subirlo aleja y aplana hacia isométrico.
-  DISTANCIA: 13.5,
+  DISTANCIA: 14.5,
   // Altura de la cámara, en proporción a la distancia.
-  ALTURA: 0.46,
-  // Grados por segundo del giro automático. 0 deja la azotea quieta.
-  GIRO: 2.4,
+  ALTURA: 0.44,
+  // Grados por segundo del giro automático.
+  GIRO: 2.2,
   // Grados de balanceo que añade el puntero.
-  PARALAJE: 5,
-  // Segundos que tarda Yago en ir de una maceta a la siguiente.
-  PASO: 3.2,
-  // Cuánto se mecen las plantas con el viento, por cada 100 km/h.
+  PARALAJE: 4,
+  // Lo rápido que Yago se desplaza a su sitio.
+  ANDAR: 2.4,
+  // Cuánto se mecen las plantas por cada 100 km/h de viento.
   MECIDA: 0.5,
-  // Gotas de lluvia.
-  GOTAS: 700,
+  GOTAS: 650,
   CAIDA: 18,
 };
 
-const TONOS = {
-  dia: { base: "#e9432a", hondo: "#b32a17", alto: "#f68a76", crema: "#f4efe6", oscuro: "#6d1a0e" },
-  noche: { base: "#c9381f", hondo: "#8a2211", alto: "#e9705a", crema: "#e6e0d4", oscuro: "#40100a" },
+/** Colores de verdad: la escena ya no es monocroma. */
+const COLOR = {
+  losa: "#c2bcae",
+  bloque: "#9a9287",
+  pretil: "#d6d0c2",
+  caseta: "#cac3b4",
+  metal: "#9aa3ab",
+  tierra: "#7a5641",
+  tiesto: "#c4693f",
+  hoja: "#5aa84f",
+  hojaClara: "#79c463",
+  madera: "#a9713f",
+  maderaOsc: "#6f4526",
+  piel: "#e9b58c",
+  pelo: "#c46a2c",
+  camiseta: "#d8422e",
+  vaquero: "#3f5878",
+  zapato: "#2f3338",
+  pianoNegro: "#23252a",
+  teclaBlanca: "#f2efe8",
+  sabana: "#eae5d9",
+  almohada: "#ffffff",
+  pantallaOn: "#9fe6ff",
+  guitarraRoja: "#c0392b",
+  cielo: "#8fd0e8",
 };
 
-export type Faena = "regar" | "trabajar" | "paraguas";
+export type Faena = "trabajar" | "piano" | "guitarra" | "micro" | "regar" | "dormir" | "paraguas";
 
-function mate(color: string, rugosidad = 0.62) {
-  return new MeshStandardMaterial({ color: new Color(color), roughness: rugosidad, metalness: 0.02 });
+/** Dónde se pone Yago y hacia dónde mira para cada faena. */
+const PUESTOS: Record<Faena, { x: number; z: number; giro: number }> = {
+  trabajar: { x: -1.55, z: -0.55, giro: 0 },
+  piano: { x: -1.5, z: 1.72, giro: Math.PI },
+  guitarra: { x: 1.65, z: 1.35, giro: Math.PI * 0.85 },
+  micro: { x: 0.35, z: 1.05, giro: 0.1 },
+  regar: { x: 1.5, z: -1.15, giro: -1.2 },
+  dormir: { x: 1.45, z: -1.35, giro: 0 },
+  paraguas: { x: 0.1, z: 0.35, giro: 0.6 },
+};
+
+function mate(color: string, rugosidad = 0.72, metalico = 0.02) {
+  return new MeshStandardMaterial({
+    color: new Color(color),
+    roughness: rugosidad,
+    metalness: metalico,
+  });
 }
 
 export function montarEscena(lienzo: HTMLCanvasElement) {
@@ -67,224 +102,320 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
   const azotea = new Group();
   scene.add(azotea);
 
-  const mats = {
-    obra: mate(TONOS.dia.base, 0.85),
-    obraHonda: mate(TONOS.dia.hondo, 0.88),
-    pretil: mate(TONOS.dia.alto, 0.8),
-    piel: mate(TONOS.dia.crema, 0.7),
-    pelo: mate(TONOS.dia.hondo, 0.75),
-    ropa: mate(TONOS.dia.base, 0.6),
-    metal: mate(TONOS.dia.alto, 0.35),
-    hoja: mate(TONOS.dia.alto, 0.6),
-    sombra: mate(TONOS.dia.oscuro, 0.5),
-  };
+  /** Trastos sobre los que se puede pulsar. */
+  const pulsables: { raiz: Object3D; faena: Faena; nombre: string }[] = [];
 
   /* ─── el edificio ─── */
 
-  const LADO = 4.4;
+  const LADO = 4.6;
 
-  const losa = new Mesh(new RoundedBoxGeometry(LADO, 0.36, LADO, 3, 0.06), mats.obra);
+  const losa = new Mesh(new RoundedBoxGeometry(LADO, 0.34, LADO, 3, 0.06), mate(COLOR.losa, 0.9));
   losa.receiveShadow = true;
   losa.castShadow = true;
   azotea.add(losa);
 
-  // el bloque de abajo, solo lo justo para que se entienda que es un tejado
-  const bloque = new Mesh(new RoundedBoxGeometry(LADO * 0.94, 2.1, LADO * 0.94, 3, 0.06), mats.obraHonda);
-  bloque.position.y = -1.25;
+  const bloque = new Mesh(
+    new RoundedBoxGeometry(LADO * 0.93, 2.0, LADO * 0.93, 3, 0.06),
+    mate(COLOR.bloque, 0.92),
+  );
+  bloque.position.y = -1.18;
   bloque.castShadow = true;
   azotea.add(bloque);
 
-  // pretil en dos lados: da profundidad sin cerrar la vista
   for (const [x, z, ancho, fondo] of [
-    [0, -LADO / 2 + 0.12, LADO, 0.24],
-    [-LADO / 2 + 0.12, 0, 0.24, LADO],
+    [0, -LADO / 2 + 0.1, LADO, 0.2],
+    [-LADO / 2 + 0.1, 0, 0.2, LADO],
   ] as const) {
-    const muro = new Mesh(new RoundedBoxGeometry(ancho, 0.62, fondo, 3, 0.05), mats.pretil);
-    muro.position.set(x, 0.49, z);
+    const muro = new Mesh(new RoundedBoxGeometry(ancho, 0.5, fondo, 3, 0.04), mate(COLOR.pretil, 0.88));
+    muro.position.set(x, 0.42, z);
     muro.castShadow = true;
     muro.receiveShadow = true;
     azotea.add(muro);
   }
 
-  // caseta de la escalera
-  const caseta = new Mesh(new RoundedBoxGeometry(1.35, 1.2, 1.2, 3, 0.07), mats.pretil);
-  caseta.position.set(-1.2, 0.78, -1.1);
+  const caseta = new Mesh(new RoundedBoxGeometry(1.1, 1.0, 1.0, 3, 0.06), mate(COLOR.caseta, 0.88));
+  caseta.position.set(-1.45, 0.67, -1.6);
   caseta.castShadow = true;
   azotea.add(caseta);
 
-  const puerta = new Mesh(new RoundedBoxGeometry(0.62, 0.86, 0.06, 2, 0.03), mats.sombra);
-  puerta.position.set(-1.35, 0.61, -0.63);
-  azotea.add(puerta);
+  /* ─── escritorio ─── */
 
-  // depósito de agua
-  const deposito = new Mesh(new CylinderGeometry(0.42, 0.42, 0.72, 20), mats.metal);
-  deposito.position.set(1.7, 0.72, -1.55);
-  deposito.castShadow = true;
-  azotea.add(deposito);
+  const escritorio = new Group();
+  const tablero = new Mesh(new RoundedBoxGeometry(1.15, 0.07, 0.6, 2, 0.02), mate(COLOR.madera, 0.65));
+  tablero.position.y = 0.52;
+  tablero.castShadow = true;
+  escritorio.add(tablero);
+  for (const [px, pz] of [[-0.48, -0.22], [0.48, -0.22], [-0.48, 0.22], [0.48, 0.22]] as const) {
+    const pata = new Mesh(new CylinderGeometry(0.025, 0.025, 0.52, 8), mate(COLOR.maderaOsc, 0.7));
+    pata.position.set(px, 0.26, pz);
+    escritorio.add(pata);
+  }
+  const base = new Mesh(new RoundedBoxGeometry(0.42, 0.02, 0.3, 2, 0.01), mate(COLOR.zapato, 0.4, 0.4));
+  base.position.set(0, 0.57, 0.05);
+  escritorio.add(base);
+  const tapa = new Mesh(new RoundedBoxGeometry(0.42, 0.28, 0.02, 2, 0.01), mate(COLOR.zapato, 0.4, 0.4));
+  tapa.position.set(0, 0.7, -0.09);
+  tapa.rotation.x = -0.22;
+  escritorio.add(tapa);
+  const brillo = new Mesh(
+    new RoundedBoxGeometry(0.37, 0.23, 0.01, 2, 0.005),
+    new MeshStandardMaterial({
+      color: new Color(COLOR.pantallaOn),
+      emissive: new Color(COLOR.pantallaOn),
+      emissiveIntensity: 0.55,
+      roughness: 0.3,
+    }),
+  );
+  brillo.position.set(0, 0.7, -0.078);
+  brillo.rotation.x = -0.22;
+  escritorio.add(brillo);
+  escritorio.position.set(-1.55, 0.17, -1.15);
+  azotea.add(escritorio);
+  pulsables.push({ raiz: escritorio, faena: "trabajar", nombre: "el escritorio" });
 
-  // antena
-  const mastil = new Mesh(new CylinderGeometry(0.035, 0.05, 1.9, 8), mats.metal);
-  mastil.position.set(-1.35, 2.35, -1.3);
-  azotea.add(mastil);
-  for (let i = 0; i < 3; i++) {
-    const brazo = new Mesh(new CylinderGeometry(0.02, 0.02, 0.62 - i * 0.14, 6), mats.metal);
-    brazo.rotation.z = Math.PI / 2;
-    brazo.position.set(-1.35, 2.75 + i * 0.26, -1.3);
-    azotea.add(brazo);
+  /* ─── cama ─── */
+
+  const cama = new Group();
+  const somier = new Mesh(new RoundedBoxGeometry(1.0, 0.18, 1.55, 3, 0.04), mate(COLOR.maderaOsc, 0.75));
+  somier.position.y = 0.2;
+  somier.castShadow = true;
+  cama.add(somier);
+  const colchon = new Mesh(new RoundedBoxGeometry(0.94, 0.2, 1.48, 3, 0.07), mate(COLOR.sabana, 0.85));
+  colchon.position.y = 0.38;
+  colchon.castShadow = true;
+  cama.add(colchon);
+  const almohada = new Mesh(new RoundedBoxGeometry(0.62, 0.14, 0.32, 3, 0.06), mate(COLOR.almohada, 0.9));
+  almohada.position.set(0, 0.52, -0.52);
+  cama.add(almohada);
+  const cabecero = new Mesh(new RoundedBoxGeometry(1.0, 0.5, 0.08, 3, 0.03), mate(COLOR.maderaOsc, 0.7));
+  cabecero.position.set(0, 0.48, -0.78);
+  cama.add(cabecero);
+  cama.position.set(1.45, 0.17, -1.1);
+  azotea.add(cama);
+  pulsables.push({ raiz: cama, faena: "dormir", nombre: "la cama" });
+
+  /* ─── piano ─── */
+
+  const piano = new Group();
+  const mueble = new Mesh(new RoundedBoxGeometry(1.5, 0.62, 0.46, 3, 0.04), mate(COLOR.pianoNegro, 0.35));
+  mueble.position.y = 0.55;
+  mueble.castShadow = true;
+  piano.add(mueble);
+  const teclado = new Mesh(new RoundedBoxGeometry(1.34, 0.05, 0.26, 2, 0.015), mate(COLOR.teclaBlanca, 0.5));
+  teclado.position.set(0, 0.87, 0.14);
+  piano.add(teclado);
+  for (let i = 0; i < 9; i++) {
+    const negra = new Mesh(new RoundedBoxGeometry(0.045, 0.035, 0.15, 1, 0.008), mate(COLOR.pianoNegro, 0.4));
+    negra.position.set(-0.58 + i * 0.145, 0.91, 0.09);
+    piano.add(negra);
+  }
+  for (const px of [-0.66, 0.66] as const) {
+    const pata = new Mesh(new CylinderGeometry(0.045, 0.045, 0.52, 8), mate(COLOR.pianoNegro, 0.4));
+    pata.position.set(px, 0.26, 0);
+    piano.add(pata);
+  }
+  const banqueta = new Mesh(new RoundedBoxGeometry(0.52, 0.09, 0.26, 2, 0.02), mate(COLOR.maderaOsc, 0.7));
+  banqueta.position.set(0, 0.4, 0.62);
+  piano.add(banqueta);
+  piano.position.set(-1.5, 0.17, 1.28);
+  piano.rotation.y = Math.PI;
+  azotea.add(piano);
+  pulsables.push({ raiz: piano, faena: "piano", nombre: "el piano" });
+
+  /* ─── guitarras ─── */
+
+  function guitarra(color: string) {
+    const g = new Group();
+    const caja = new Mesh(new SphereGeometry(0.26, 18, 14), mate(color, 0.42));
+    caja.scale.set(1, 1.2, 0.34);
+    caja.position.y = 0.3;
+    caja.castShadow = true;
+    g.add(caja);
+    const cintura = new Mesh(new SphereGeometry(0.19, 16, 12), mate(color, 0.42));
+    cintura.scale.set(1, 1, 0.34);
+    cintura.position.y = 0.62;
+    g.add(cintura);
+    const boca = new Mesh(new CylinderGeometry(0.075, 0.075, 0.02, 16), mate("#2b1d12", 0.9));
+    boca.rotation.x = Math.PI / 2;
+    boca.position.set(0, 0.34, 0.09);
+    g.add(boca);
+    const mastil = new Mesh(new RoundedBoxGeometry(0.075, 0.72, 0.05, 2, 0.02), mate(COLOR.maderaOsc, 0.6));
+    mastil.position.y = 1.08;
+    g.add(mastil);
+    const pala = new Mesh(new RoundedBoxGeometry(0.11, 0.18, 0.04, 2, 0.02), mate(COLOR.maderaOsc, 0.6));
+    pala.position.y = 1.5;
+    g.add(pala);
+    const pie = new Mesh(new CylinderGeometry(0.02, 0.16, 0.16, 10), mate(COLOR.metal, 0.4, 0.7));
+    pie.position.y = 0.06;
+    g.add(pie);
+    return g;
   }
 
-  /* ─── las macetas ─── */
+  const guitarras = new Group();
+  const g1 = guitarra(COLOR.madera);
+  g1.position.set(-0.28, 0, 0);
+  g1.rotation.z = 0.08;
+  const g2 = guitarra(COLOR.guitarraRoja);
+  g2.position.set(0.3, 0, 0.12);
+  g2.rotation.z = -0.1;
+  guitarras.add(g1, g2);
+  guitarras.position.set(1.62, 0.17, 1.62);
+  guitarras.rotation.y = -0.6;
+  azotea.add(guitarras);
+  pulsables.push({ raiz: guitarras, faena: "guitarra", nombre: "las guitarras" });
+
+  /* ─── micrófono ─── */
+
+  const micro = new Group();
+  const trípode = new Mesh(new CylinderGeometry(0.022, 0.03, 1.15, 10), mate(COLOR.metal, 0.35, 0.8));
+  trípode.position.y = 0.58;
+  micro.add(trípode);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const pataM = new Mesh(new CylinderGeometry(0.014, 0.014, 0.3, 6), mate(COLOR.metal, 0.35, 0.8));
+    pataM.position.set(Math.cos(a) * 0.1, 0.1, Math.sin(a) * 0.1);
+    pataM.rotation.z = Math.cos(a) * 0.7;
+    pataM.rotation.x = -Math.sin(a) * 0.7;
+    micro.add(pataM);
+  }
+  const capsula = new Mesh(new CylinderGeometry(0.075, 0.075, 0.22, 16), mate(COLOR.zapato, 0.4, 0.5));
+  capsula.position.y = 1.2;
+  capsula.castShadow = true;
+  micro.add(capsula);
+  const rejilla = new Mesh(new SphereGeometry(0.08, 14, 10), mate(COLOR.metal, 0.3, 0.9));
+  rejilla.position.y = 1.31;
+  micro.add(rejilla);
+  const antipop = new Mesh(new CylinderGeometry(0.11, 0.11, 0.015, 18), mate("#2f3338", 0.8));
+  antipop.rotation.x = Math.PI / 2;
+  antipop.position.set(0, 1.26, 0.17);
+  micro.add(antipop);
+  micro.position.set(0.35, 0.17, 1.62);
+  azotea.add(micro);
+  pulsables.push({ raiz: micro, faena: "micro", nombre: "el micrófono" });
+
+  /* ─── macetas ─── */
 
   const SITIOS: [number, number][] = [
-    [1.25, 1.15],
-    [0.15, 1.5],
-    [-0.75, 1.2],
-    [1.5, 0.05],
+    [1.75, -0.05],
+    [1.15, 0.45],
+    [-0.3, -1.65],
   ];
   const plantas: Group[] = [];
-
   for (const [x, z] of SITIOS) {
     const maceta = new Group();
-    const tiesto = new Mesh(new CylinderGeometry(0.24, 0.19, 0.34, 14), mats.pretil);
-    tiesto.position.y = 0.34;
+    const tiesto = new Mesh(new CylinderGeometry(0.2, 0.16, 0.3, 16), mate(COLOR.tiesto, 0.85));
+    tiesto.position.y = 0.15;
     tiesto.castShadow = true;
     maceta.add(tiesto);
+    const sustrato = new Mesh(new CylinderGeometry(0.18, 0.18, 0.04, 16), mate(COLOR.tierra, 1));
+    sustrato.position.y = 0.3;
+    maceta.add(sustrato);
 
     const mata = new Group();
-    const tallo = new Mesh(new CylinderGeometry(0.03, 0.045, 0.8, 8), mats.pelo);
-    tallo.position.y = 0.4;
+    const tallo = new Mesh(new CylinderGeometry(0.025, 0.035, 0.42, 8), mate(COLOR.hoja, 0.8));
+    tallo.position.y = 0.21;
     mata.add(tallo);
-    for (let h = 0; h < 4; h++) {
-      const a = (h / 4) * Math.PI * 2;
-      const hoja = new Mesh(new SphereGeometry(0.17, 12, 9), mats.hoja);
-      hoja.scale.set(0.42, 0.3, 1.25);
-      hoja.position.set(Math.cos(a) * 0.2, 0.62 + (h % 2) * 0.16, Math.sin(a) * 0.2);
+    for (let h = 0; h < 5; h++) {
+      const a = (h / 5) * Math.PI * 2;
+      const hoja = new Mesh(new SphereGeometry(0.15, 12, 9), mate(h % 2 ? COLOR.hoja : COLOR.hojaClara, 0.75));
+      hoja.scale.set(0.4, 0.28, 1.1);
+      hoja.position.set(Math.cos(a) * 0.14, 0.34 + (h % 2) * 0.12, Math.sin(a) * 0.14);
       hoja.rotation.y = -a;
-      hoja.rotation.x = -0.5;
+      hoja.rotation.x = -0.55;
       hoja.castShadow = true;
       mata.add(hoja);
     }
-    mata.position.y = 0.5;
+    mata.position.y = 0.3;
     maceta.add(mata);
     maceta.userData["mata"] = mata;
-
-    maceta.position.set(x, 0.18, z);
+    maceta.position.set(x, 0.17, z);
     azotea.add(maceta);
     plantas.push(maceta);
   }
+  pulsables.push({ raiz: plantas[0]!, faena: "regar", nombre: "las macetas" });
 
   /* ─── Yago ─── */
 
   const yago = new Group();
 
-  const piernas = new Mesh(new RoundedBoxGeometry(0.26, 0.34, 0.2, 3, 0.05), mats.sombra);
-  piernas.position.y = 0.17;
+  const piernas = new Mesh(new RoundedBoxGeometry(0.24, 0.32, 0.18, 3, 0.05), mate(COLOR.vaquero, 0.85));
+  piernas.position.y = 0.16;
   piernas.castShadow = true;
   yago.add(piernas);
 
-  // la camiseta roja de la foto es justo el acento: encaja sin forzar nada
-  const torso = new Mesh(new RoundedBoxGeometry(0.38, 0.42, 0.26, 3, 0.07), mats.ropa);
-  torso.position.y = 0.55;
+  const torso = new Mesh(new RoundedBoxGeometry(0.34, 0.38, 0.23, 3, 0.07), mate(COLOR.camiseta, 0.8));
+  torso.position.y = 0.5;
   torso.castShadow = true;
   yago.add(torso);
 
-  const brazoIzq = new Mesh(new CylinderGeometry(0.055, 0.05, 0.36, 8), mats.piel);
-  brazoIzq.position.set(-0.24, 0.56, 0);
+  const brazoIzq = new Mesh(new CylinderGeometry(0.05, 0.045, 0.34, 8), mate(COLOR.piel, 0.8));
+  brazoIzq.position.set(-0.21, 0.5, 0);
   brazoIzq.castShadow = true;
   yago.add(brazoIzq);
-
-  const brazoDer = new Mesh(new CylinderGeometry(0.055, 0.05, 0.36, 8), mats.piel);
-  brazoDer.position.set(0.24, 0.56, 0);
+  const brazoDer = new Mesh(new CylinderGeometry(0.05, 0.045, 0.34, 8), mate(COLOR.piel, 0.8));
+  brazoDer.position.set(0.21, 0.5, 0);
   brazoDer.castShadow = true;
   yago.add(brazoDer);
 
-  const cuello = new Mesh(new CylinderGeometry(0.06, 0.06, 0.07, 8), mats.piel);
-  cuello.position.y = 0.79;
-  yago.add(cuello);
-
-  const cabeza = new Mesh(new SphereGeometry(0.17, 20, 16), mats.piel);
-  cabeza.position.y = 0.95;
-  cabeza.scale.set(0.92, 1, 0.92);
+  const cabeza = new Mesh(new SphereGeometry(0.155, 20, 16), mate(COLOR.piel, 0.8));
+  cabeza.position.y = 0.85;
+  cabeza.scale.set(0.93, 1, 0.93);
   cabeza.castShadow = true;
   yago.add(cabeza);
 
-  // el pelo, revuelto y con volumen: es lo que hace que se reconozca
+  // el pelo revuelto: es lo que hace que se reconozca
   const pelo = new Group();
-  const casquete = new Mesh(new SphereGeometry(0.185, 18, 14), mats.pelo);
-  casquete.scale.set(1, 0.82, 1);
-  casquete.position.y = 0.04;
+  const casquete = new Mesh(new SphereGeometry(0.168, 18, 14), mate(COLOR.pelo, 0.9));
+  casquete.scale.set(1, 0.84, 1);
   pelo.add(casquete);
   for (let i = 0; i < 7; i++) {
     const a = (i / 7) * Math.PI * 2;
-    const mecha = new Mesh(new SphereGeometry(0.075, 10, 8), mats.pelo);
-    mecha.position.set(Math.cos(a) * 0.115, 0.13 + (i % 3) * 0.035, Math.sin(a) * 0.115);
+    const mecha = new Mesh(new SphereGeometry(0.068, 10, 8), mate(COLOR.pelo, 0.9));
+    mecha.position.set(Math.cos(a) * 0.105, 0.085 + (i % 3) * 0.032, Math.sin(a) * 0.105);
     mecha.scale.set(1, 1.5, 1);
     mecha.rotation.z = Math.cos(a) * 0.5;
     pelo.add(mecha);
   }
-  pelo.position.y = 0.99;
+  pelo.position.y = 0.895;
   yago.add(pelo);
 
-  yago.scale.setScalar(1.55);
+  yago.scale.setScalar(1.35);
   azotea.add(yago);
 
-  /* ─── los trastos ─── */
+  /* ─── trastos que lleva encima ─── */
 
   const regadera = new Group();
-  const cubo = new Mesh(new CylinderGeometry(0.1, 0.085, 0.16, 12), mats.metal);
-  regadera.add(cubo);
-  const pitorro = new Mesh(new CylinderGeometry(0.022, 0.032, 0.24, 8), mats.metal);
+  regadera.add(new Mesh(new CylinderGeometry(0.09, 0.075, 0.14, 12), mate(COLOR.metal, 0.4, 0.6)));
+  const pitorro = new Mesh(new CylinderGeometry(0.02, 0.028, 0.2, 8), mate(COLOR.metal, 0.4, 0.6));
   pitorro.rotation.z = -0.9;
-  pitorro.position.set(0.13, 0.03, 0);
+  pitorro.position.set(0.11, 0.02, 0);
   regadera.add(pitorro);
-  regadera.position.set(0.3, 0.46, 0.1);
+  regadera.position.set(0.27, 0.42, 0.08);
+  regadera.visible = false;
   yago.add(regadera);
 
-  // el chorro, solo visible en el momento de regar
-  const chorro = new Mesh(new CylinderGeometry(0.012, 0.02, 0.4, 6), mats.metal);
-  chorro.position.set(0.44, 0.24, 0.1);
-  chorro.visible = false;
-  yago.add(chorro);
-
   const paraguas = new Group();
-  const varilla = new Mesh(new CylinderGeometry(0.018, 0.018, 0.72, 6), mats.metal);
-  varilla.position.y = 0.36;
+  const varilla = new Mesh(new CylinderGeometry(0.016, 0.016, 0.66, 6), mate(COLOR.metal, 0.4, 0.6));
+  varilla.position.y = 0.33;
   paraguas.add(varilla);
-  const copa = new Mesh(new SphereGeometry(0.46, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), mats.pretil);
-  copa.position.y = 0.66;
-  copa.scale.y = 0.62;
+  const copa = new Mesh(
+    new SphereGeometry(0.44, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    mate(COLOR.camiseta, 0.7),
+  );
+  copa.position.y = 0.6;
+  copa.scale.y = 0.6;
   copa.castShadow = true;
   paraguas.add(copa);
-  paraguas.position.set(0.26, 0.46, 0.05);
+  paraguas.position.set(0.24, 0.42, 0.04);
   paraguas.visible = false;
   yago.add(paraguas);
 
-  const escritorio = new Group();
-  const tablero = new Mesh(new RoundedBoxGeometry(0.85, 0.06, 0.5, 2, 0.02), mats.pretil);
-  tablero.position.y = 0.42;
-  tablero.castShadow = true;
-  escritorio.add(tablero);
-  for (const [px, pz] of [[-0.34, -0.17], [0.34, -0.17], [-0.34, 0.17], [0.34, 0.17]] as const) {
-    const pata = new Mesh(new CylinderGeometry(0.022, 0.022, 0.42, 6), mats.sombra);
-    pata.position.set(px, 0.21, pz);
-    escritorio.add(pata);
-  }
-  const portatil = new Mesh(new RoundedBoxGeometry(0.34, 0.24, 0.02, 2, 0.01), mats.metal);
-  portatil.position.set(0, 0.58, -0.1);
-  portatil.rotation.x = -0.28;
-  escritorio.add(portatil);
-  const brillo = new Mesh(new RoundedBoxGeometry(0.3, 0.2, 0.01, 2, 0.01), mate(TONOS.dia.crema, 0.2));
-  brillo.material.emissive = new Color(TONOS.dia.crema);
-  brillo.material.emissiveIntensity = 0.6;
-  brillo.position.set(0, 0.58, -0.088);
-  brillo.rotation.x = -0.28;
-  escritorio.add(brillo);
-  const silla = new Mesh(new RoundedBoxGeometry(0.3, 0.06, 0.3, 2, 0.02), mats.sombra);
-  silla.position.set(0, 0.3, 0.52);
-  escritorio.add(silla);
-  escritorio.position.set(-1.9, 0.18, 1.35);
-  escritorio.visible = false;
-  azotea.add(escritorio);
+  const guitarraEnMano = guitarra(COLOR.madera);
+  guitarraEnMano.scale.setScalar(0.72);
+  guitarraEnMano.position.set(0.02, 0.18, 0.2);
+  guitarraEnMano.rotation.set(0.25, 0, -0.5);
+  guitarraEnMano.visible = false;
+  yago.add(guitarraEnMano);
 
   /* ─── lluvia ─── */
 
@@ -293,41 +424,38 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
   geoLluvia.setAttribute("position", new BufferAttribute(gotas, 3));
   const lluvia = new LineSegments(
     geoLluvia,
-    new LineBasicMaterial({ color: new Color(TONOS.dia.hondo), transparent: true, opacity: 0.45 }),
+    new LineBasicMaterial({ color: new Color("#9dc4de"), transparent: true, opacity: 0.55 }),
   );
   lluvia.frustumCulled = false;
   lluvia.visible = false;
   scene.add(lluvia);
   for (let i = 0; i < CALIBRACION.GOTAS; i++) {
     const j = i * 6;
-    gotas[j] = (Math.random() - 0.5) * 11;
-    gotas[j + 1] = Math.random() * 11;
-    gotas[j + 2] = (Math.random() - 0.5) * 11;
+    gotas[j] = (Math.random() - 0.5) * 10;
+    gotas[j + 1] = Math.random() * 10;
+    gotas[j + 2] = (Math.random() - 0.5) * 10;
     gotas[j + 3] = gotas[j]!;
-    gotas[j + 4] = gotas[j + 1]! - 0.55;
+    gotas[j + 4] = gotas[j + 1]! - 0.5;
     gotas[j + 5] = gotas[j + 2]!;
   }
 
-  /* ─── sol, y un aro que hace de sol o de luna ─── */
+  /* ─── luz ─── */
 
-  const astro = new Mesh(new TorusGeometry(0.62, 0.07, 10, 28), mats.metal);
-  astro.position.set(2.1, 3.1, -1.2);
-  azotea.add(astro);
-
-  const sol = new DirectionalLight(0xffffff, 2.4);
+  const sol = new DirectionalLight(0xfff2e0, 2.3);
   sol.position.set(4, 7, 3);
   sol.castShadow = true;
   sol.shadow.mapSize.set(1024, 1024);
-  sol.shadow.camera.left = -6;
-  sol.shadow.camera.right = 6;
-  sol.shadow.camera.top = 6;
-  sol.shadow.camera.bottom = -6;
+  sol.shadow.camera.left = -5;
+  sol.shadow.camera.right = 5;
+  sol.shadow.camera.top = 5;
+  sol.shadow.camera.bottom = -5;
   sol.shadow.bias = -0.001;
   scene.add(sol);
-  const relleno = new DirectionalLight(0xffffff, 0.75);
+  const relleno = new DirectionalLight(0xcfe4ff, 0.85);
   relleno.position.set(-5, 3, -3);
   scene.add(relleno);
-  scene.add(new AmbientLight(0xffffff, 1.15));
+  const ambiente = new AmbientLight(0xffffff, 1.05);
+  scene.add(ambiente);
 
   /* ─── estado ─── */
 
@@ -337,10 +465,11 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
   let punteroX = 0;
   let punteroY = 0;
   let reloj = 0;
-  let faena: Faena = "regar";
+  let faena: Faena = "trabajar";
   let viento = 0;
-  let destino = 0;
-  let cambio = 0;
+
+  const rayo = new Raycaster();
+  const puntero = new Vector2();
 
   function medir() {
     const caja = lienzo.getBoundingClientRect();
@@ -348,43 +477,49 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(caja.width, caja.height, false);
     camera.aspect = caja.width / caja.height;
-    const lejos = CALIBRACION.DISTANCIA * Math.max(1, 0.95 / Math.max(camera.aspect, 0.35));
+    const lejos = CALIBRACION.DISTANCIA * Math.max(1, 0.9 / Math.max(camera.aspect, 0.35));
     camera.position.set(lejos * 0.62, lejos * CALIBRACION.ALTURA, lejos * 0.62);
-    camera.lookAt(0, -0.15, 0);
+    camera.lookAt(0, -0.25, 0);
     camera.updateProjectionMatrix();
   }
 
   return {
     medir,
 
-    pintar(turno: "dia" | "noche") {
-      const p = TONOS[turno];
-      mats.obra.color.set(p.base);
-      mats.obraHonda.color.set(p.hondo);
-      mats.pretil.color.set(p.alto);
-      mats.piel.color.set(p.crema);
-      mats.pelo.color.set(p.hondo);
-      mats.ropa.color.set(p.base);
-      mats.metal.color.set(p.alto);
-      mats.hoja.color.set(p.alto);
-      mats.sombra.color.set(p.oscuro);
-      (brillo.material as MeshStandardMaterial).color.set(p.crema);
-      (brillo.material as MeshStandardMaterial).emissive.set(p.crema);
-      (lluvia.material as LineBasicMaterial).color.set(p.hondo);
+    /** Qué trasto hay bajo el puntero, si hay alguno. */
+    trastoEn(x: number, y: number) {
+      const caja = lienzo.getBoundingClientRect();
+      puntero.x = ((x - caja.left) / caja.width) * 2 - 1;
+      puntero.y = -((y - caja.top) / caja.height) * 2 + 1;
+      rayo.setFromCamera(puntero, camera);
+      const toca = rayo.intersectObjects(pulsables.map((p) => p.raiz), true)[0];
+      if (!toca) return null;
+      for (let o: Object3D | null = toca.object; o; o = o.parent) {
+        const encontrado = pulsables.find((p) => p.raiz === o);
+        if (encontrado) return encontrado;
+      }
+      return null;
     },
 
-    /** Qué está haciendo Yago ahí arriba. */
     hacer(nueva: Faena) {
-      if (nueva === faena) return;
       faena = nueva;
-      paraguas.visible = nueva === "paraguas";
       regadera.visible = nueva === "regar";
-      chorro.visible = false;
-      escritorio.visible = nueva === "trabajar";
+      paraguas.visible = nueva === "paraguas";
+      guitarraEnMano.visible = nueva === "guitarra";
       lluvia.visible = nueva === "paraguas";
+      yago.visible = true;
+      // dormido se le ve tumbado, así que el cuerpo gira entero
+      yago.rotation.z = nueva === "dormir" ? Math.PI / 2 : 0;
     },
 
-    /** Velocidad del viento en km/h: mece las plantas y la antena. */
+    /** De noche se enciende el portátil y baja la luz general. */
+    alumbrar(esDeDia: boolean) {
+      sol.intensity = esDeDia ? 2.3 : 0.9;
+      relleno.intensity = esDeDia ? 0.85 : 0.7;
+      ambiente.intensity = esDeDia ? 1.05 : 0.8;
+      (brillo.material as MeshStandardMaterial).emissiveIntensity = esDeDia ? 0.35 : 1.4;
+    },
+
     soplar(kmh: number) {
       viento = kmh;
     },
@@ -404,48 +539,56 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
       azotea.rotation.y = giro + balanceoY;
       azotea.rotation.x = balanceoX;
 
-      // las plantas se mecen con el viento de verdad
       const mecida = (viento / 100) * CALIBRACION.MECIDA;
       plantas.forEach((maceta, i) => {
         const mata = maceta.userData["mata"] as Group;
         mata.rotation.z = Math.sin(reloj * 1.6 + i) * mecida;
         mata.rotation.x = Math.cos(reloj * 1.2 + i * 2) * mecida * 0.6;
       });
-      mastil.rotation.z = Math.sin(reloj * 2.1) * mecida * 0.35;
 
-      if (faena === "regar") {
-        // va de maceta en maceta, se para y riega
-        cambio += dt;
-        if (cambio > CALIBRACION.PASO) {
-          cambio = 0;
-          destino = (destino + 1) % SITIOS.length;
-        }
-        const objetivo = SITIOS[destino]!;
-        const meta = { x: objetivo[0] - 0.55, z: objetivo[1] - 0.1 };
-        yago.position.x += (meta.x - yago.position.x) * dt * 2.2;
-        yago.position.z += (meta.z - yago.position.z) * dt * 2.2;
-        yago.position.y = 0.18 + Math.abs(Math.sin(reloj * 6)) * 0.02;
-        yago.rotation.y = Math.atan2(objetivo[0] - yago.position.x, objetivo[1] - yago.position.z);
+      // se va andando a su puesto
+      const p = PUESTOS[faena];
+      yago.position.x += (p.x - yago.position.x) * dt * CALIBRACION.ANDAR;
+      yago.position.z += (p.z - yago.position.z) * dt * CALIBRACION.ANDAR;
 
-        const regando = cambio > CALIBRACION.PASO * 0.45;
-        chorro.visible = regando;
-        regadera.rotation.z = regando ? -0.7 : 0;
-      } else if (faena === "trabajar") {
-        yago.position.x += (-1.9 - yago.position.x) * dt * 2.2;
-        yago.position.z += (1.87 - yago.position.z) * dt * 2.2;
-        yago.position.y = 0.32;
-        yago.rotation.y = Math.PI;
-        // el teclear: un cabeceo mínimo
-        cabeza.position.y = 0.95 + Math.sin(reloj * 7) * 0.008;
+      const lejos = Math.hypot(p.x - yago.position.x, p.z - yago.position.z);
+      const andando = lejos > 0.06;
+
+      if (faena === "dormir") {
+        yago.position.y = 0.62;
+        yago.rotation.y = 0;
       } else {
-        yago.position.x += (0.2 - yago.position.x) * dt * 2.2;
-        yago.position.z += (0.9 - yago.position.z) * dt * 2.2;
-        yago.position.y = 0.18;
-        yago.rotation.y = 0.5;
-        paraguas.rotation.z = Math.sin(reloj * 1.4) * 0.05;
+        // pasitos mientras se mueve, y un respirar leve al llegar
+        yago.position.y = 0.17 + (andando ? Math.abs(Math.sin(reloj * 9)) * 0.03 : 0);
+        yago.rotation.y = p.giro;
       }
 
-      astro.rotation.z += dt * 0.15;
+      // pequeños gestos según lo que esté haciendo
+      const gesto = andando ? 0 : 1;
+      if (faena === "trabajar") {
+        cabeza.position.y = 0.85 + Math.sin(reloj * 7) * 0.006 * gesto;
+        brazoIzq.rotation.x = -0.9 * gesto;
+        brazoDer.rotation.x = -0.9 * gesto;
+      } else if (faena === "piano") {
+        brazoIzq.rotation.x = (-1.1 + Math.sin(reloj * 8) * 0.12) * gesto;
+        brazoDer.rotation.x = (-1.1 + Math.cos(reloj * 8) * 0.12) * gesto;
+      } else if (faena === "guitarra") {
+        brazoDer.rotation.x = (-0.6 + Math.sin(reloj * 6) * 0.25) * gesto;
+        brazoIzq.rotation.x = -0.8 * gesto;
+        yago.position.y += Math.sin(reloj * 3) * 0.008 * gesto;
+      } else if (faena === "micro") {
+        cabeza.position.y = 0.85 + Math.sin(reloj * 2.4) * 0.012 * gesto;
+        brazoIzq.rotation.x = -0.3 * gesto;
+        brazoDer.rotation.x = -0.3 * gesto;
+      } else if (faena === "regar") {
+        regadera.rotation.z = -0.7 * gesto;
+        brazoDer.rotation.x = -0.7 * gesto;
+        brazoIzq.rotation.x = 0;
+      } else {
+        cabeza.position.y = 0.85;
+        brazoIzq.rotation.x = 0;
+        brazoDer.rotation.x = 0;
+      }
 
       if (lluvia.visible) {
         const caida = CALIBRACION.CAIDA * dt;
@@ -453,12 +596,12 @@ export function montarEscena(lienzo: HTMLCanvasElement) {
           const j = i * 6;
           gotas[j + 1] = gotas[j + 1]! - caida;
           gotas[j + 4] = gotas[j + 4]! - caida;
-          if (gotas[j + 4]! < -3.5) {
-            gotas[j] = (Math.random() - 0.5) * 11;
-            gotas[j + 2] = (Math.random() - 0.5) * 11;
-            gotas[j + 1] = 9;
+          if (gotas[j + 4]! < -3) {
+            gotas[j] = (Math.random() - 0.5) * 10;
+            gotas[j + 2] = (Math.random() - 0.5) * 10;
+            gotas[j + 1] = 8;
             gotas[j + 3] = gotas[j]!;
-            gotas[j + 4] = 8.45;
+            gotas[j + 4] = 7.5;
             gotas[j + 5] = gotas[j + 2]!;
           }
         }

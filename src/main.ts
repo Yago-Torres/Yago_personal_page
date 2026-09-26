@@ -6,12 +6,19 @@ import { CIUDADES, consultarMeteo, NOMBRES, RESERVA, rosa, type Ciudad, type Met
 import { ahora } from "./tiempo.ts";
 
 export const CALIBRACION = {
+  // Jornada laboral: de lunes a viernes, a estas horas, Yago está trabajando.
+  ENTRA: 8,
+  SALE: 17,
+  // Fuera de la jornada, a partir de esta hora se va a la cama.
+  ACUESTA: 23,
+  LEVANTA: 8,
+  // Segundos que dura cada rato de ocio antes de cambiar de trasto.
+  RATO: 24,
+  // Segundos que se queda haciendo lo que le pides al pulsar o al señalar.
+  CAPRICHO: 14,
   // Cada cuánto se vuelve a consultar el tiempo, en minutos.
   REFRESCO: 10,
-  // Caracteres del mensaje. Más allá deja de ser un titular.
   LARGO_MARCA: 42,
-  // Segundos que Yago se queda haciendo la faena que se señala en el pronóstico.
-  OJEADA: 2.6,
 };
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
@@ -24,6 +31,64 @@ const pon = (sel: string, texto: string) => {
 
 const lienzo = $<HTMLCanvasElement>("#lienzo");
 const escena = lienzo ? montarEscena(lienzo) : null;
+
+/* ─── qué hace Yago ─────────────────────────────────────────── */
+
+const FAENAS: Record<Faena, string> = {
+  trabajar: "Yago está trabajando",
+  piano: "Yago está al piano",
+  guitarra: "Yago está con la guitarra",
+  micro: "Yago está grabando",
+  regar: "Yago riega las macetas",
+  dormir: "Yago está durmiendo",
+  paraguas: "Yago ha sacado el paraguas",
+};
+
+const OCIO: Faena[] = ["piano", "guitarra", "micro", "regar"];
+
+let meteo: Meteo = RESERVA;
+let faenaFijada: Faena | null = null;
+let soltar: ReturnType<typeof setTimeout> | undefined;
+let ratoDesde = Date.now();
+let ocioActual = 0;
+
+/** Lo que tocaría hacer ahora mismo, sin contar caprichos. */
+function faenaDeAgenda(): Faena {
+  const t = ahora();
+  const llueve = meteo.precipitacion > 0 || meteo.cielo === "lluvia" || meteo.cielo === "tormenta";
+  if (llueve) return "paraguas";
+  if (t.hora24 >= CALIBRACION.ACUESTA || t.hora24 < CALIBRACION.LEVANTA) return "dormir";
+  if (t.laborable && t.hora24 >= CALIBRACION.ENTRA && t.hora24 < CALIBRACION.SALE) return "trabajar";
+
+  // rato libre: va cambiando de trasto
+  if (Date.now() - ratoDesde > CALIBRACION.RATO * 1000) {
+    ratoDesde = Date.now();
+    ocioActual = (ocioActual + 1) % OCIO.length;
+  }
+  return OCIO[ocioActual]!;
+}
+
+function ponerFaena(f: Faena) {
+  escena?.hacer(f);
+  pon("#escena-pie", FAENAS[f]);
+}
+
+function repasarFaena() {
+  ponerFaena(faenaFijada ?? faenaDeAgenda());
+}
+
+/** Un capricho: lo que le pides dura un rato y luego vuelve a su agenda. */
+function pedir(f: Faena) {
+  faenaFijada = f;
+  ponerFaena(f);
+  clearTimeout(soltar);
+  soltar = setTimeout(() => {
+    faenaFijada = null;
+    repasarFaena();
+  }, CALIBRACION.CAPRICHO * 1000);
+}
+
+/* ─── el bucle y los trastos ────────────────────────────────── */
 
 if (escena && lienzo) {
   escena.medir();
@@ -38,6 +103,17 @@ if (escena && lienzo) {
     escena.apuntar(e.clientX / innerWidth - 0.5, e.clientY / innerHeight - 0.5);
   });
 
+  // pulsar un trasto manda a Yago a usarlo
+  lienzo.addEventListener("pointerup", (e) => {
+    const trasto = escena.trastoEn(e.clientX, e.clientY);
+    if (trasto) pedir(trasto.faena);
+  });
+
+  lienzo.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "touch") return;
+    lienzo.style.cursor = escena.trastoEn(e.clientX, e.clientY) ? "pointer" : "grab";
+  });
+
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let anterior = performance.now();
   const cuadro = (t: number) => {
@@ -49,49 +125,25 @@ if (escena && lienzo) {
   requestAnimationFrame(cuadro);
 }
 
-/* ─── qué hace Yago ─────────────────────────────────────────── */
-
-const FAENAS: Record<Faena, string> = {
-  regar: "Yago riega las macetas",
-  trabajar: "Yago se ha puesto a trabajar",
-  paraguas: "Yago ha sacado el paraguas",
-};
-
-let faenaReal: Faena = "regar";
-let ojeada: ReturnType<typeof setTimeout> | undefined;
-
-function ponerFaena(f: Faena) {
-  escena?.hacer(f);
-  pon("#escena-pie", FAENAS[f]);
-}
-
 /** El pronóstico deja asomarse: al señalar una etapa, Yago la representa. */
 for (const fila of document.querySelectorAll<HTMLElement>(".dia[data-faena]")) {
   const f = fila.dataset["faena"] as Faena;
-  const asomar = () => {
-    clearTimeout(ojeada);
-    ponerFaena(f);
-    ojeada = setTimeout(() => ponerFaena(faenaReal), CALIBRACION.OJEADA * 1000);
-  };
-  fila.addEventListener("pointerenter", asomar);
-  fila.addEventListener("focusin", asomar);
+  fila.addEventListener("pointerenter", () => pedir(f));
+  fila.addEventListener("focusin", () => pedir(f));
 }
 
 /* ─── el viento: las barras del stack ───────────────────────── */
 
-// se llenan al entrar en pantalla, para que se vea el gesto
 const rachas = [...document.querySelectorAll<HTMLElement>(".racha")];
-const llenar = (el: HTMLElement) => {
-  const barra = el.querySelector<HTMLElement>(".racha__barra i");
-  if (barra) barra.style.width = `${el.dataset["fuerza"] ?? 0}%`;
-};
 if (rachas.length) {
   const ojo = new IntersectionObserver(
     (entradas) => {
       for (const e of entradas) {
         if (!e.isIntersecting) continue;
-        llenar(e.target as HTMLElement);
-        ojo.unobserve(e.target);
+        const el = e.target as HTMLElement;
+        const barra = el.querySelector<HTMLElement>(".racha__barra i");
+        if (barra) barra.style.width = `${el.dataset["fuerza"] ?? 0}%`;
+        ojo.unobserve(el);
       }
     },
     { threshold: 0.3 },
@@ -108,46 +160,51 @@ function ciudadGuardada(): Ciudad {
     const c = localStorage.getItem(LLAVE_CIUDAD);
     if (c && c in CIUDADES) return c as Ciudad;
   } catch {
-    // almacenamiento bloqueado: se empieza por Zaragoza y ya está
+    // almacenamiento bloqueado: se empieza por Zaragoza
   }
   return "zaragoza";
 }
 
 let ciudad: Ciudad = ciudadGuardada();
-let meteo: Meteo = RESERVA;
+
+const CIELO_TEMA: Record<string, string> = {
+  despejado: "#2f7cc9",
+  nubes: "#5c7d97",
+  niebla: "#7c858c",
+  lluvia: "#35505f",
+  tormenta: "#262f3d",
+  nieve: "#6d879c",
+};
 
 function pintar() {
   const t = ahora();
   const noche = !meteo.esDeDia;
+  const raiz = document.documentElement;
 
-  document.documentElement.dataset["turno"] = noche ? "noche" : "dia";
+  raiz.dataset["turno"] = noche ? "noche" : "dia";
+  raiz.dataset["cielo"] = meteo.cielo;
   const tema = $<HTMLMetaElement>('meta[name="theme-color"]');
-  if (tema) tema.content = noche ? "#14130f" : "#ece9e2";
+  if (tema) tema.content = noche ? "#0a1120" : (CIELO_TEMA[meteo.cielo] ?? "#2f7cc9");
 
   pon("#ciudad-nombre", CIUDADES[ciudad].nombre);
   pon("#ahora-temp", `${Math.round(meteo.temperatura)}°`);
   pon("#ahora-cielo", NOMBRES[meteo.cielo]);
   pon("#ahora-sensacion", `${Math.round(meteo.sensacion)}°`);
   pon("#ahora-hora", t.hora);
-  pon("#dato-viento", `${Math.round(meteo.viento)} km/h ${rosa(meteo.rumbo)}`);
+  pon("#ahora-estacion", t.estacion);
+  pon("#dato-viento", `${Math.round(meteo.viento)} ${rosa(meteo.rumbo)}`);
   pon("#dato-humedad", `${Math.round(meteo.humedad)}%`);
   pon("#dato-lluvia", `${meteo.precipitacion.toFixed(1)} mm`);
-  pon("#dato-estacion", t.estacion);
+  pon("#dato-sensacion", `${Math.round(meteo.sensacion)}°`);
 
-  // el amanecer y el atardecer de verdad, junto a los de la carrera
-  const arco = document.querySelectorAll<HTMLElement>(".arco__hito .rotulillo");
-  if (arco.length === 2 && meteo.real) {
-    arco[0]!.textContent = `Amanece ${meteo.amanecer} · 2022`;
-    arco[1]!.textContent = `Se pone ${meteo.atardecer} · 2026`;
+  if (meteo.real) {
+    pon("#hora-amanecer", `Sale a las ${meteo.amanecer}`);
+    pon("#hora-atardecer", `Se pone a las ${meteo.atardecer}`);
   }
 
-  const llueve = meteo.precipitacion > 0 || meteo.cielo === "lluvia" || meteo.cielo === "tormenta";
-  faenaReal = llueve ? "paraguas" : noche ? "trabajar" : "regar";
-  clearTimeout(ojeada);
-  ponerFaena(faenaReal);
-
-  escena?.pintar(noche ? "noche" : "dia");
+  escena?.alumbrar(meteo.esDeDia);
   escena?.soplar(meteo.viento);
+  repasarFaena();
 }
 
 async function traerMeteo() {
@@ -156,6 +213,7 @@ async function traerMeteo() {
 }
 
 for (const b of document.querySelectorAll<HTMLButtonElement>("[data-ciudad]")) {
+  b.setAttribute("aria-pressed", String(b.dataset["ciudad"] === ciudad));
   b.addEventListener("click", () => {
     ciudad = b.dataset["ciudad"] as Ciudad;
     for (const otro of document.querySelectorAll<HTMLButtonElement>("[data-ciudad]")) {
@@ -168,13 +226,16 @@ for (const b of document.querySelectorAll<HTMLButtonElement>("[data-ciudad]")) {
     }
     void traerMeteo();
   });
-  b.setAttribute("aria-pressed", String(b.dataset["ciudad"] === ciudad));
 }
 
 pintar();
 void traerMeteo();
 setInterval(() => void traerMeteo(), CALIBRACION.REFRESCO * 60_000);
-setInterval(pintar, 60_000);
+// el reloj y la agenda se repasan a menudo: Yago cambia de faena solo
+setInterval(() => {
+  pon("#ahora-hora", ahora().hora);
+  repasarFaena();
+}, 5_000);
 
 const anio = $("#anio");
 if (anio) anio.textContent = String(new Date().getFullYear());

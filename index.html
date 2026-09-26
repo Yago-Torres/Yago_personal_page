@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-cielo="despejado">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -7,13 +7,46 @@
     <meta
       name="description"
       content="El currículum de Yago Torres leído como un parte del tiempo. Ingeniero de software en IA generativa, agentes y devops." />
-    <meta name="theme-color" content="#ece9e2" />
+    <meta name="theme-color" content="#2f7cc9" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="/src/estilo.css" />
   </head>
 
   <body>
+    <!-- iconos, definidos una vez -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <g id="i-reloj" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="8" cy="8" r="6.4" /><path d="M8 4.4V8l2.4 1.6" />
+        </g>
+        <g id="i-calendario" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <rect x="1.8" y="3.2" width="12.4" height="11" rx="2" /><path d="M1.8 6.6h12.4M5 1.8v2.6M11 1.8v2.6" />
+        </g>
+        <g id="i-viento" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M1.6 5.4h8a2 2 0 1 0-2-2M1.6 8.6h10.6a2 2 0 1 1-2 2M1.6 11.8h6" />
+        </g>
+        <g id="i-sol" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M1.4 12.6h13.2M4.6 12.6a3.4 3.4 0 0 1 6.8 0M8 2v2.2M3.1 4.1l1.5 1.5M12.9 4.1l-1.5 1.5" />
+        </g>
+        <g id="i-aviso" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8 2.2 14.6 13H1.4L8 2.2ZM8 6.6v3M8 11.4h.01" />
+        </g>
+        <g id="i-antena" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="8" cy="8" r="1.6" /><path d="M4.8 4.8a4.5 4.5 0 0 0 0 6.4M11.2 4.8a4.5 4.5 0 0 1 0 6.4M2.6 2.6a7.6 7.6 0 0 0 0 10.8M13.4 2.6a7.6 7.6 0 0 1 0 10.8" />
+        </g>
+        <g id="i-birrete" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8 2.4 15 6l-7 3.6L1 6l7-3.6ZM4 7.6v3.6c0 1 1.8 2 4 2s4-1 4-2V7.6" />
+        </g>
+        <g id="i-lapiz" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M11.4 1.8 14.2 4.6 5.4 13.4l-3.6.8.8-3.6 8.8-8.8Z" />
+        </g>
+        <g id="i-gota" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+          <path d="M8 1.8c2.6 3 4.4 5.2 4.4 7.4a4.4 4.4 0 1 1-8.8 0C3.6 7 5.4 4.8 8 1.8Z" />
+        </g>
+      </defs>
+    </svg>
+
     <header class="barra">
       <div class="carril barra__fila">
         <a class="marca" href="#">YTG<i>-01</i></a>
@@ -27,110 +60,86 @@
     </header>
 
     <main>
-      <!-- ─── ahora mismo ─────────────────────────────────── -->
-      <section class="panel">
-        <div class="carril panel__fila">
-          <div class="panel__texto">
-            <p class="rotulillo">Ahora en <span id="ciudad-nombre">Zaragoza</span></p>
-
-            <div class="ahora">
-              <b class="ahora__grado display" id="ahora-temp">--°</b>
-              <div class="ahora__lado">
-                <p class="ahora__cielo" id="ahora-cielo">—</p>
-                <p class="rotulillo">
-                  Sensación <span id="ahora-sensacion">--°</span> ·
-                  <span id="ahora-hora">--:--</span>
-                </p>
-              </div>
-            </div>
-
-            <h1 class="display">Yago<br />Torres</h1>
-            <p class="panel__entrada">
-              Ingeniero de software. Ahora mismo en IA generativa, agentes y automatización,
-              con la infraestructura y los sistemas de fondo. Esto es mi currículum leído
-              como un parte del tiempo: el viento son mis herramientas, el pronóstico es mi
-              experiencia y las próximas horas son lo que viene.
-            </p>
-            <div class="panel__acciones">
-              <a class="boton boton--acento" href="#pronostico">Ver el parte</a>
-              <a class="boton boton--hueco" href="#marca">Deja tu marca</a>
-            </div>
-          </div>
-
-          <div class="escena">
-            <canvas id="lienzo" aria-hidden="true"></canvas>
-            <p class="escena__pie rotulillo" id="escena-pie">Yago riega las macetas</p>
-          </div>
-        </div>
-
-        <div class="tira" aria-label="condiciones actuales">
-          <div><b id="dato-viento">-- km/h</b><span class="rotulillo">Viento</span></div>
-          <div><b id="dato-humedad">--%</b><span class="rotulillo">Humedad</span></div>
-          <div><b id="dato-lluvia">-- mm</b><span class="rotulillo">Precipitación</span></div>
-          <div><b id="dato-estacion">—</b><span class="rotulillo">Estación</span></div>
-        </div>
+      <!-- ─── cabecera del tiempo ─────────────────────────── -->
+      <section class="carril cumbre">
+        <h1 class="cumbre__ciudad" id="ciudad-nombre">Zaragoza</h1>
+        <p class="cumbre__grado" id="ahora-temp">--°</p>
+        <p class="cumbre__cielo" id="ahora-cielo">—</p>
+        <p class="cumbre__extremos">
+          Sensación <span id="ahora-sensacion">--°</span> ·
+          <span id="ahora-hora">--:--</span> ·
+          <span id="ahora-estacion">—</span>
+        </p>
+        <p class="cumbre__quien">
+          <strong>Yago Torres</strong>, ingeniero de software. IA generativa, agentes y
+          automatización, con la infraestructura de fondo. Mi currículum, leído como un parte
+          del tiempo.
+        </p>
       </section>
 
-      <!-- ─── próximas horas = certificaciones ────────────── -->
-      <section class="seccion" id="proximas">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Próximas<br />horas</h2>
-            <p class="rotulillo">Certificaciones en camino</p>
-          </div>
+      <div class="azotea">
+        <canvas id="lienzo" aria-hidden="true"></canvas>
+      </div>
+      <p class="azotea__pie" id="escena-pie">Yago está trabajando</p>
 
+      <div class="acciones">
+        <a class="boton" href="#pronostico">Ver el parte</a>
+        <a class="boton" href="#marca">Deja tu marca</a>
+      </div>
+
+      <!-- ─── tarjetas ────────────────────────────────────── -->
+      <div class="carril tarjetas">
+        <!-- próximas horas = certificaciones -->
+        <section class="tarjeta tarjeta--ancha" id="proximas">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-reloj" /></svg>
+            Próximas horas · certificaciones en camino
+          </h2>
           <div class="horas">
-            <article class="hora">
-              <p class="rotulillo">En breve</p>
-              <h3>AZ-900</h3>
-              <p>Azure Fundamentals</p>
-              <span class="hora__prob">Microsoft</span>
-            </article>
-            <article class="hora">
-              <p class="rotulillo">Después</p>
-              <h3>AI-900</h3>
-              <p>Azure AI Fundamentals</p>
-              <span class="hora__prob">Microsoft</span>
-            </article>
-            <article class="hora">
-              <p class="rotulillo">Más tarde</p>
-              <h3>AZ-104</h3>
-              <p>Azure Administrator Associate</p>
-              <span class="hora__prob">Microsoft</span>
-            </article>
-            <article class="hora">
-              <p class="rotulillo">En el horizonte</p>
-              <h3>GH-200</h3>
-              <p>GitHub Actions</p>
-              <span class="hora__prob">GitHub</span>
-            </article>
+            <div class="hora">
+              <span class="hora__cuando">En breve</span>
+              <span class="hora__codigo">AZ-900</span>
+              <span class="hora__que">Azure Fundamentals</span>
+            </div>
+            <div class="hora">
+              <span class="hora__cuando">Después</span>
+              <span class="hora__codigo">AI-900</span>
+              <span class="hora__que">Azure AI Fundamentals</span>
+            </div>
+            <div class="hora">
+              <span class="hora__cuando">Más tarde</span>
+              <span class="hora__codigo">AZ-104</span>
+              <span class="hora__que">Azure Administrator</span>
+            </div>
+            <div class="hora">
+              <span class="hora__cuando">En el horizonte</span>
+              <span class="hora__codigo">GH-200</span>
+              <span class="hora__que">GitHub Actions</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- ─── pronóstico = experiencia ────────────────────── -->
-      <section class="seccion" id="pronostico">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Pronóstico</h2>
-            <p class="rotulillo">Dónde he trabajado</p>
-          </div>
+        <!-- pronóstico = experiencia -->
+        <section class="tarjeta tarjeta--ancha" id="pronostico">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-calendario" /></svg>
+            Pronóstico · dónde he trabajado
+          </h2>
 
           <article class="dia" data-faena="trabajar">
-            <p class="dia__cuando">sep 2026<br /><small>hoy</small></p>
-            <div class="dia__que">
+            <p class="dia__cuando">sep 2026<small>hoy</small></p>
+            <div>
               <h3>Capgemini <span>· Equipo GenAI</span></h3>
               <ul>
                 <li>Desarrollo de agentes y automatización sobre IA generativa.</li>
                 <li>Prácticas de devops en el ciclo de vida de producto.</li>
               </ul>
             </div>
-            <p class="dia__marca">En curso</p>
           </article>
 
           <article class="dia" data-faena="regar">
-            <p class="dia__cuando">jun 2024<br /><small>ago 2024</small></p>
-            <div class="dia__que">
+            <p class="dia__cuando">jun 2024<small>ago 2024</small></p>
+            <div>
               <h3>INETUM <span>· Análisis documental con IA</span></h3>
               <ul>
                 <li>
@@ -141,31 +150,26 @@
                 <li>Aprendí que la parte difícil de la IA en producción no es el modelo.</li>
               </ul>
             </div>
-            <p class="dia__marca">Beca</p>
           </article>
 
           <article class="dia" data-faena="paraguas">
-            <p class="dia__cuando">may 2023<br /><small>ago 2023</small></p>
-            <div class="dia__que">
+            <p class="dia__cuando">may 2023<small>ago 2023</small></p>
+            <div>
               <h3>Urtats <span>· Socorrista</span></h3>
               <ul>
                 <li>Seguridad acuática, respuesta ante emergencias, RCP y desfibrilador.</li>
                 <li>Trabajo en equipo con responsabilidad real sobre personas.</li>
               </ul>
             </div>
-            <p class="dia__marca">Verano</p>
           </article>
-        </div>
-      </section>
+        </section>
 
-      <!-- ─── viento = stack ──────────────────────────────── -->
-      <section class="seccion" id="viento">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Viento</h2>
-            <p class="rotulillo">Con qué trabajo, y a qué velocidad</p>
-          </div>
-
+        <!-- viento = stack -->
+        <section class="tarjeta tarjeta--ancha" id="viento">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-viento" /></svg>
+            Viento · con qué trabajo y a qué velocidad
+          </h2>
           <div class="racha" data-fuerza="88"><span>Linux y administración de sistemas</span><span class="racha__barra"><i></i></span><b>88</b></div>
           <div class="racha" data-fuerza="85"><span>Docker · Kubernetes · Terraform · OpenStack</span><span class="racha__barra"><i></i></span><b>85</b></div>
           <div class="racha" data-fuerza="82"><span>IA generativa · agentes · Python</span><span class="racha__barra"><i></i></span><b>82</b></div>
@@ -174,150 +178,139 @@
           <div class="racha" data-fuerza="58"><span>JavaScript · TypeScript · React · Next</span><span class="racha__barra"><i></i></span><b>58</b></div>
           <div class="racha" data-fuerza="44"><span>SQL</span><span class="racha__barra"><i></i></span><b>44</b></div>
           <div class="racha" data-fuerza="32"><span>Haskell</span><span class="racha__barra"><i></i></span><b>32</b></div>
+          <p class="apunte">Km/h de lo suelto que voy con cada cosa. Estimación mía, no una nota.</p>
+        </section>
 
-          <p class="apostilla">
-            Los números son mi propia estimación, no una nota. Km/h de lo suelto que voy con
-            cada cosa.
-          </p>
-        </div>
-      </section>
-
-      <!-- ─── amanecer y atardecer = formación ────────────── -->
-      <section class="seccion" id="formacion">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Amanecer<br />y atardecer</h2>
-            <p class="rotulillo">La carrera, de punta a punta</p>
-          </div>
-
+        <!-- amanecer y atardecer = carrera -->
+        <section class="tarjeta" id="formacion">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-sol" /></svg>
+            Amanecer y atardecer · la carrera
+          </h2>
           <div class="arco">
-            <div class="arco__hito">
-              <p class="rotulillo">Amanece · 2022</p>
-              <h3>Universidad de Zaragoza</h3>
-              <p>Ingeniería Informática. Donde empieza todo.</p>
-            </div>
-            <div class="arco__linea" aria-hidden="true"></div>
-            <div class="arco__hito">
-              <p class="rotulillo">Se pone · 2026</p>
-              <h3>Universität Konstanz</h3>
-              <p>El último curso, en Alemania.</p>
+            <div class="arco__curva" aria-hidden="true"></div>
+            <div class="arco__extremos">
+              <div class="arco__hito">
+                <b>2022</b>
+                Universidad de Zaragoza
+                <small id="hora-amanecer"></small>
+              </div>
+              <div class="arco__hito" style="text-align: right">
+                <b>2026</b>
+                Universität Konstanz
+                <small id="hora-atardecer"></small>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div class="lista" style="margin-top: 36px">
-            <div><span>Inglés C1 · Alemán B1 · Escuela Oficial de Idiomas</span><small>—</small></div>
+        <!-- condiciones -->
+        <section class="tarjeta">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-gota" /></svg>
+            Condiciones
+          </h2>
+          <div class="pareja">
+            <p class="dato"><b id="dato-viento">--</b><span>Viento</span></p>
+            <p class="dato"><b id="dato-humedad">--%</b><span>Humedad</span></p>
+            <p class="dato"><b id="dato-lluvia">-- mm</b><span>Precipitación</span></p>
+            <p class="dato"><b id="dato-sensacion">--°</b><span>Sensación</span></p>
+          </div>
+        </section>
+
+        <!-- avisos = premios -->
+        <section class="tarjeta" id="avisos">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-aviso" /></svg>
+            Avisos · premios
+          </h2>
+          <div class="aviso-linea" data-nivel="rojo">
+            <i></i>
+            <div><h3>Olimpiada de programación de Navarra</h3><p>Ganador · UPNA</p></div>
+            <small>2022</small>
+          </div>
+          <div class="aviso-linea" data-nivel="naranja">
+            <i></i>
+            <div><h3>NASA Space Apps Challenge</h3><p>Etopía, Zaragoza</p></div>
+            <small>2024</small>
+          </div>
+          <div class="aviso-linea" data-nivel="amarillo">
+            <i></i>
+            <div><h3>Premio Fernando Remacha</h3><p>Música · Conservatorio de Tudela</p></div>
+            <small>2012</small>
+          </div>
+          <div class="aviso-linea" data-nivel="amarillo">
+            <i></i>
+            <div><h3>Bachillerato British Council</h3><p>IES Benjamín de Tudela</p></div>
+            <small>2022</small>
+          </div>
+        </section>
+
+        <!-- estaciones = proyectos -->
+        <section class="tarjeta" id="estaciones">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-antena" /></svg>
+            Estaciones · lo que hago por mi cuenta
+          </h2>
+          <a class="estacion" href="https://github.com/Yago-Torres/Yago_personal_page" target="_blank" rel="noopener noreferrer">
+            <div><h3>yagotg.dev</h3><p>Esta azotea</p></div><span>Repo →</span>
+          </a>
+          <a class="estacion" href="https://github.com/Yago-Torres/rustytype" target="_blank" rel="noopener noreferrer">
+            <div><h3>rustytype</h3><p>Mecanografía en la terminal</p></div><span>Repo →</span>
+          </a>
+          <a class="estacion" href="https://github.com/Yago-Torres/Bloste" target="_blank" rel="noopener noreferrer">
+            <div><h3>Bloste</h3><p>Implementación de la librería</p></div><span>Repo →</span>
+          </a>
+          <a class="estacion" href="https://github.com/Yago-Torres/nebulin" target="_blank" rel="noopener noreferrer">
+            <div><h3>nebulin</h3><p>Pendiente de describir</p></div><span>Repo →</span>
+          </a>
+        </section>
+
+        <!-- idiomas y música -->
+        <section class="tarjeta">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-birrete" /></svg>
+            Otras estaciones
+          </h2>
+          <div class="lista">
+            <div><span>Inglés C1 · Alemán B1 · EOI</span><small>—</small></div>
             <div><span>Estudios profesionales de música · Conservatorio de Tudela</span><small>2012</small></div>
           </div>
-        </div>
-      </section>
+          <p class="apunte">
+            De ahí las guitarras, el piano y el micro de la azotea. Pulsa cualquiera y verás.
+          </p>
+        </section>
 
-      <!-- ─── avisos = premios ────────────────────────────── -->
-      <section class="seccion" id="avisos">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Avisos</h2>
-            <p class="rotulillo">Premios y reconocimientos</p>
-          </div>
-
-          <div class="rejilla">
-            <article class="aviso-card">
-              <p class="rotulillo">Aviso rojo · 2022</p>
-              <h3>Olimpiada de programación de Navarra</h3>
-              <p>Ganador. Universidad Pública de Navarra.</p>
-            </article>
-            <article class="aviso-card">
-              <p class="rotulillo">Aviso naranja · 2024</p>
-              <h3>NASA Space Apps Challenge</h3>
-              <p>Participante. Etopía, Zaragoza.</p>
-            </article>
-            <article class="aviso-card">
-              <p class="rotulillo">Aviso amarillo · 2012</p>
-              <h3>Premio Fernando Remacha</h3>
-              <p>Música. Conservatorio de Tudela.</p>
-            </article>
-            <article class="aviso-card">
-              <p class="rotulillo">Aviso amarillo · 2022</p>
-              <h3>Bachillerato British Council</h3>
-              <p>IES Benjamín de Tudela.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ─── estaciones = proyectos ──────────────────────── -->
-      <section class="seccion" id="estaciones">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Estaciones</h2>
-            <p class="rotulillo">Lo que hago por mi cuenta</p>
-          </div>
-
-          <div class="rejilla">
-            <a class="ficha" href="https://github.com/Yago-Torres/Yago_personal_page" target="_blank" rel="noopener noreferrer">
-              <h3>yagotg.dev</h3>
-              <p>Esta azotea. Mi currículum leído como un parte meteorológico.</p>
-              <span class="ficha__ir">Ver repo →</span>
-            </a>
-            <a class="ficha" href="https://github.com/Yago-Torres/rustytype" target="_blank" rel="noopener noreferrer">
-              <h3>rustytype</h3>
-              <p>Aplicación de terminal para practicar mecanografía, inspirada en Monkeytype.</p>
-              <span class="ficha__ir">Ver repo →</span>
-            </a>
-            <a class="ficha" href="https://github.com/Yago-Torres/Bloste" target="_blank" rel="noopener noreferrer">
-              <h3>Bloste</h3>
-              <p>Implementación de la librería Bloste.</p>
-              <span class="ficha__ir">Ver repo →</span>
-            </a>
-            <a class="ficha" href="https://github.com/Yago-Torres/nebulin" target="_blank" rel="noopener noreferrer">
-              <h3>nebulin</h3>
-              <p>Pendiente de describir.</p>
-              <span class="ficha__ir">Ver repo →</span>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <!-- ─── deja tu marca ───────────────────────────────── -->
-      <section class="seccion" id="marca">
-        <div class="carril">
-          <div class="seccion__cabeza">
-            <h2 class="display">Deja tu<br />marca</h2>
-            <p class="rotulillo">Queda escrita aquí abajo</p>
-          </div>
-
-          <form class="marca-forma" id="forma-marca" autocomplete="off">
-            <label class="rotulillo" for="campo-marca">Tu mensaje</label>
-            <input class="campo" id="campo-marca" name="mensaje" type="text" maxlength="42" placeholder="escribe algo" />
+        <!-- deja tu marca -->
+        <section class="tarjeta tarjeta--ancha" id="marca">
+          <h2 class="tarjeta__titulo">
+            <svg aria-hidden="true"><use href="#i-lapiz" /></svg>
+            Deja tu marca
+          </h2>
+          <form id="forma-marca" autocomplete="off" style="display: grid; gap: 12px">
+            <input class="campo" id="campo-marca" name="mensaje" type="text" maxlength="42"
+              placeholder="escribe algo" aria-label="Tu mensaje" />
             <div class="marca-pie">
               <span class="cuenta" id="cuenta-marca">0/42</span>
-              <button class="boton boton--hueco" id="borrar-marca" type="button">Quitarla</button>
+              <button class="boton" id="borrar-marca" type="button">Quitarla</button>
             </div>
-            <p class="aviso">
-              De momento tu mensaje se guarda solo en este navegador. Cuando la azotea pase a
-              ser compartida, los mensajes se moderarán antes de publicarse.
-            </p>
           </form>
-
-          <p class="display marca-eco" id="marca-eco" hidden></p>
-        </div>
-      </section>
+          <p class="marca-eco" id="marca-eco" hidden></p>
+          <p class="apunte">
+            De momento se guarda solo en este navegador. Cuando la azotea pase a ser
+            compartida, los mensajes se moderarán antes de publicarse.
+          </p>
+        </section>
+      </div>
     </main>
 
-    <!-- ─── pie ───────────────────────────────────────────── -->
-    <footer class="seccion pie" id="contacto" style="border-bottom: 0">
-      <div class="carril">
-        <h2 class="display pie__grande">Hablamos</h2>
-        <div class="pie__fila" style="margin-top: 28px">
-          <p>
-            <a href="mailto:torresgarciayago@gmail.com">torresgarciayago@gmail.com</a>
-            &nbsp;·&nbsp;
-            <a href="https://github.com/Yago-Torres" target="_blank" rel="noopener noreferrer">GitHub</a>
-          </p>
-          <p class="rotulillo">
-            Datos del tiempo: Open-Meteo · <span id="anio">2026</span>
-          </p>
-        </div>
-      </div>
+    <footer class="carril pie" id="contacto">
+      <p>
+        <a href="mailto:torresgarciayago@gmail.com">torresgarciayago@gmail.com</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/Yago-Torres" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </p>
+      <small>Datos del tiempo: Open-Meteo · <span id="anio">2026</span></small>
     </footer>
 
     <script type="module" src="/src/main.ts"></script>

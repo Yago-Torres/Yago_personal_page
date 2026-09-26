@@ -5,8 +5,11 @@ description: Sistema de diseño de yagotg.dev (YTG-01), la web personal de Yago 
 
 # Sistema de diseño YTG-01
 
-Una web personal editorial: **manda la tipografía y el objeto 3D acompaña**. Es
-una página con secciones, no una aplicación 3D con interfaz flotando encima.
+**Una app del tiempo de verdad**, al estilo de la de Apple: fondo en degradado
+que cambia con la condición y la hora, texto claro, temperatura enorme y fina
+arriba, y debajo una retícula de tarjetas translúcidas con título en
+versalitas y su icono. La azotea en 3D flota entre la cabecera y las tarjetas:
+pequeña y **sin marco**, nunca dentro de una caja.
 
 ## La metáfora
 
@@ -15,7 +18,7 @@ del tiempo sostiene una parte del CV, y la traducción es fija:
 
 | Widget | Contenido |
 |---|---|
-| Ahora mismo | El tiempo real de la ciudad elegida y el puesto actual |
+| Cabecera | El tiempo real de la ciudad elegida y quién es Yago |
 | Próximas horas | Certificaciones pendientes |
 | Pronóstico | Experiencia: cada etapa es un día |
 | Viento | El stack, con velocidad en % |
@@ -24,8 +27,21 @@ del tiempo sostiene una parte del CV, y la traducción es fija:
 | Estaciones | Proyectos propios |
 
 El selector de ciudad (Tudela · Zaragoza · Madrid) cambia el tiempo real y con
-él la escena. **El 3D obedece al tiempo, siempre**: si llueve en la ciudad
-elegida, llueve en la azotea. No inventes estados que no vengan de la lectura.
+él la escena.
+
+## La azotea y su agenda
+
+La azotea es medio estudio: escritorio, piano, guitarras, micro de grabación,
+cama y macetas. Yago hace una cosa u otra según esta prioridad, y no otra:
+
+1. Llueve en la ciudad elegida → saca el paraguas.
+2. De 23:00 a 08:00 → duerme.
+3. De lunes a viernes, de 08:00 a 17:00 → trabaja en el escritorio.
+4. El resto del tiempo → va rotando entre piano, guitarra, micro y regar.
+
+**Pulsar un trasto** manda a Yago a usarlo un rato, y después vuelve a su
+agenda. Señalar una etapa del pronóstico hace lo mismo. Nada de estados que no
+salgan de la lectura del tiempo o de la agenda.
 
 ## La regla madre
 
@@ -51,7 +67,14 @@ desincroniza y duplica la verdad.
 
 ## Color
 
-**Un solo acento y neutros alrededor.** Nada de paletas de caramelo, nada de
+El color de la página lo pone **el cielo**: cada condición y cada turno tienen
+su degradado, declarado en `:root[data-cielo=...]`. El texto es blanco con
+tres niveles de opacidad y las tarjetas son vidrio: blanco al 12 % con
+`backdrop-filter`. Los únicos acentos son el ámbar del sol y el coral de los
+avisos.
+
+Regla vieja, ya no vigente en la página (sí en el espíritu): un solo acento y
+neutros alrededor. Nada de paletas de caramelo, nada de
 arcoíris, nada de degradados de color.
 
 - Neutros: `--papel`, `--papel-alto`, `--linea`, `--tinta`, `--tinta-media`
@@ -61,9 +84,9 @@ El acento se reserva para una palabra del titular, los botones de acción, las
 marcas de las filas y el mensaje del visitante. Si aparece en todas partes deja
 de ser un acento.
 
-**El objeto 3D es monocromo**: la azotea de Yago, con un Yago diminuto que
-riega, trabaja o saca el paraguas según el tiempo. Vive entera en tonos del
-acento, con la crema como único contrapunto. Es lo que lo mantiene pegado a la página en vez de
+**La escena va a color**, con colores creíbles: hormigón, madera, terracota,
+verde de planta, piano negro, sábanas claras. Yago lleva camiseta roja,
+vaqueros y el pelo cobrizo revuelto, que es lo que hace que se le reconozca. Es lo que lo mantiene pegado a la página en vez de
 parecer una ilustración traída de otro sitio. Los tonos están en `TONOS`, en
 `src/escena.ts`.
 

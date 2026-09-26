@@ -33,8 +33,18 @@ export function ahora(d = new Date()) {
     new Intl.DateTimeFormat("en-US", { timeZone: ZARAGOZA.zona, month: "numeric" }).format(d),
   );
 
+  // día de la semana allí: 1 lunes ... 7 domingo
+  const DIAS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const corto = new Intl.DateTimeFormat("en-US", { timeZone: ZARAGOZA.zona, weekday: "short" })
+    .format(d)
+    .toLowerCase();
+  const diaSemana = DIAS.indexOf(corto);
+
   return {
     hora: `${parte("hour")}:${parte("minute")}`,
+    /** 0 domingo, 1 lunes … 6 sábado */
+    diaSemana,
+    laborable: diaSemana >= 1 && diaSemana <= 5,
     fecha: `${parte("day")} ${parte("month").replace(".", "")}`,
     hora24: Number(parte("hour")),
     estacion: POR_MES[mes - 1] as Estacion,
