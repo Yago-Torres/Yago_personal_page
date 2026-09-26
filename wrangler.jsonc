@@ -3,10 +3,16 @@
   "name": "ytg-01",
   "compatibility_date": "2026-09-26",
   "assets": { "directory": "./dist" },
-  // Requiere haber quitado antes los dominios personalizados del proyecto de Pages,
-  // si no el deploy falla diciendo que el hostname ya está en uso.
-  "routes": [
-    { "pattern": "yagotg.dev", "custom_domain": true },
-    { "pattern": "www.yagotg.dev", "custom_domain": true }
-  ]
+  // El dominio propio está desactivado a propósito: así el primer despliegue
+  // sale a ytg-01.<subdominio>.workers.dev y no toca la página que hay viva
+  // ahora mismo en yagotg.dev.
+  //
+  // Para quedarte el dominio: quita primero los dominios personalizados del
+  // proyecto de Pages en el panel de Cloudflare y descomenta esto.
+  //
+  // "routes": [
+  //   { "pattern": "yagotg.dev", "custom_domain": true },
+  //   { "pattern": "www.yagotg.dev", "custom_domain": true }
+  // ]
+  "observability": { "enabled": true }
 }
