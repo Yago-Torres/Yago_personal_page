@@ -8,56 +8,80 @@
     <style>
       :root {
         --tipo: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
-        --tinta: #3f3a2f;
-        --pantalla: #141f1a;
-        --fosforo: #cfe8c4;
+        --chapa: #f4efe2;
+        --tinta: #2e2a21;
+        --tinta-floja: #7d7666;
+        --surco: #cdc5b2;
+        --pantalla: #0f1a15;
+        --fosforo: #d5ecc9;
+        --fosforo-flojo: #d5ecc980;
         --coral: #ff6b4a;
+        --u: 6px;              /* unidad de la pantalla, la fija el motor */
         color-scheme: light;
       }
+
       * { box-sizing: border-box; }
-      body { margin: 0; overflow: hidden; background: #bfe6f0; font-family: var(--tipo); }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #bfe6f0;
+        font-family: var(--tipo);
+        -webkit-font-smoothing: antialiased;
+      }
       #lienzo { display: block; width: 100vw; height: 100dvh; }
 
-      /* ─── rótulo y lecturas ─── */
+      /* ─── chapa de datos: placa sólida, nada de texto flotando ─── */
 
-      .rotulo {
+      .chapa {
         position: fixed;
-        top: 20px;
-        left: 24px;
-        font-size: 10px;
+        top: 18px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: 2px;
+        background: var(--surco);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 0 #00000014, 0 10px 24px #0000001f;
+        pointer-events: none;
+      }
+      .chapa__marca,
+      .chapa__dato {
+        background: var(--chapa);
+        padding: 9px 14px;
+        display: grid;
+        gap: 1px;
+        align-content: center;
+      }
+      .chapa__marca { flex: 1; }
+      .chapa__modelo { font-size: 15px; font-weight: 700; letter-spacing: -.02em; color: var(--tinta); }
+      .chapa__dato { min-width: 78px; text-align: right; }
+      .chapa b {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -.01em;
+        color: var(--tinta);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum" 1;
+      }
+      .chapa span {
+        font-size: 8px;
         letter-spacing: .16em;
         text-transform: uppercase;
-        color: var(--tinta);
-        pointer-events: none;
-        text-shadow: 0 1px 2px #ffffff80;
+        color: var(--tinta-floja);
       }
-      .rotulo b { display: block; font-size: 15px; letter-spacing: -.01em; text-transform: none; }
-
-      .lecturas {
-        position: fixed;
-        top: 20px;
-        right: 24px;
-        display: flex;
-        gap: 18px;
-        font-size: 10px;
-        letter-spacing: .12em;
-        text-transform: uppercase;
-        color: var(--tinta);
-        pointer-events: none;
-        text-shadow: 0 1px 2px #ffffff80;
-      }
-      .lecturas div { display: grid; gap: 3px; justify-items: end; }
-      .lecturas b { font-size: 14px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-      .lecturas span { opacity: .6; }
 
       /* ─── etiqueta flotante ─── */
 
       #pista {
         position: fixed;
         left: 50%;
-        bottom: 28px;
+        bottom: 26px;
         translate: -50% 0;
-        padding: 7px 14px;
+        padding: 7px 15px;
         border-radius: 999px;
         background: #2a2620e6;
         color: #f6f1e4;
@@ -70,63 +94,147 @@
       }
       #pista.visible { opacity: 1; }
 
-      /* ─── ficha ─── */
+      /* ─── el visor: se coloca justo encima de la pantalla del aparato ─── */
 
-      #ficha {
+      #visor {
         position: fixed;
-        right: 5vw;
-        top: 50%;
-        translate: 0 -50%;
-        width: min(360px, 42vw);
-        max-height: 74vh;
-        overflow-y: auto;
-        display: grid;
-        gap: 12px;
-        align-content: start;
-        padding: 22px;
-        border-radius: 14px;
-        background: #141f1af2;
+        display: none;
+        overflow: hidden;
+        border-radius: 6px;
+        background: var(--pantalla);
         color: var(--fosforo);
-        font-size: 13px;
-        line-height: 1.6;
         opacity: 0;
-        transition: opacity .28s;
-        pointer-events: none;
+        transition: opacity .25s;
       }
-      #ficha.visible { opacity: 1; pointer-events: auto; }
-      #ficha h2 {
-        margin: 0;
-        font-size: 11px;
-        letter-spacing: .14em;
+      #visor.montado { display: grid; }
+      #visor.visible { opacity: 1; }
+
+      #visor-interior {
+        display: grid;
+        grid-template-rows: auto 1fr auto auto;
+        height: 100%;
+        min-height: 0;
+        font-size: calc(var(--u) * 2.1);
+        line-height: 1.5;
+      }
+
+      .pz-cabecera {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--u);
+        padding: calc(var(--u) * 1.6) calc(var(--u) * 2.2);
+        border-bottom: 1px solid #d5ecc91f;
+      }
+      .pz-titulo {
+        font-size: calc(var(--u) * 2.4);
+        letter-spacing: .12em;
         text-transform: uppercase;
-        opacity: .55;
-        font-weight: 600;
       }
-      #ficha-cuerpo { display: grid; gap: 9px; }
-      #ficha p { margin: 0; }
-      #ficha b { color: #ffbfa6; font-weight: 600; }
-
-      /* ─── consola ─── */
-
-      #consola {
-        display: grid;
-        gap: 8px;
-        padding-top: 12px;
-        border-top: 1px solid #cfe8c426;
+      .pz-reloj {
+        font-size: calc(var(--u) * 2);
+        color: var(--fosforo-flojo);
+        font-variant-numeric: tabular-nums;
       }
-      #consola-log {
-        display: grid;
-        gap: 4px;
-        max-height: 30vh;
+
+      .pz-cuerpo {
         overflow-y: auto;
-        font-size: 12px;
-        line-height: 1.55;
-        opacity: .82;
+        padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6);
+        display: grid;
+        gap: calc(var(--u) * 0.5);
+        align-content: start;
       }
-      #consola-log .eco { color: #ffbfa6; opacity: .7; }
-      #consola .linea { display: flex; gap: 9px; align-items: center; }
-      #consola .prompt { color: #ffbfa6; }
-      #entrada {
+      .pz-cuerpo::-webkit-scrollbar { width: calc(var(--u) * 0.8); }
+      .pz-cuerpo::-webkit-scrollbar-thumb { background: #d5ecc933; border-radius: 99px; }
+
+      .pz-grupo {
+        font-size: calc(var(--u) * 1.6);
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: var(--fosforo-flojo);
+        padding: calc(var(--u) * 1.2) calc(var(--u) * 0.6) calc(var(--u) * 0.3);
+      }
+
+      .pz-fila {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--u);
+        width: 100%;
+        border: 0;
+        cursor: pointer;
+        text-align: left;
+        background: #d5ecc90a;
+        color: inherit;
+        font: inherit;
+        padding: calc(var(--u) * 1.1) calc(var(--u) * 1.4);
+        border-radius: calc(var(--u) * 0.7);
+        transition: background .12s;
+      }
+      .pz-fila:hover, .pz-fila:focus-visible { background: #d5ecc924; outline: none; }
+      .pz-fila-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .pz-fila-apunte { color: var(--fosforo-flojo); font-size: calc(var(--u) * 1.7); white-space: nowrap; }
+
+      .pz-apunte, .pz-resumen { margin: 0 0 calc(var(--u) * 0.6); padding-inline: calc(var(--u) * 0.6); }
+      .pz-apunte { color: var(--fosforo-flojo); font-size: calc(var(--u) * 1.8); }
+      .pz-notas { margin: 0; padding-left: calc(var(--u) * 3); display: grid; gap: calc(var(--u) * 0.7); }
+
+      .pz-enlace { color: #ffbfa6; padding-inline: calc(var(--u) * 0.6); }
+
+      .pz-regar {
+        justify-self: start;
+        margin: calc(var(--u) * 1.2) calc(var(--u) * 0.6) 0;
+        border: 0;
+        cursor: pointer;
+        background: var(--coral);
+        color: #fff;
+        font-family: var(--tipo);
+        font-size: calc(var(--u) * 1.8);
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        padding: calc(var(--u) * 1) calc(var(--u) * 2);
+        border-radius: 999px;
+      }
+      .pz-regar:disabled { background: #d5ecc924; color: var(--fosforo-flojo); cursor: default; }
+      .pz-aviso { margin: calc(var(--u) * 0.8) calc(var(--u) * 0.6) 0; color: var(--fosforo-flojo); }
+
+      .pz-cert, .pz-estrato {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--u);
+        padding: calc(var(--u) * 1) calc(var(--u) * 1.4);
+      }
+      .pz-cert--pendiente { opacity: .5; }
+      .pz-barra {
+        flex: 0 0 28%;
+        height: calc(var(--u) * 0.9);
+        border-radius: 99px;
+        background: #d5ecc91f;
+        overflow: hidden;
+      }
+      .pz-barra i { display: block; height: 100%; background: var(--fosforo); opacity: .75; }
+
+      /* consola de texto, plegada por defecto */
+      .pz-consola[hidden] { display: none; }
+      .pz-consola {
+        border-top: 1px solid #d5ecc91f;
+        padding: calc(var(--u) * 1.2) calc(var(--u) * 2);
+        display: grid;
+        gap: calc(var(--u) * 0.6);
+      }
+      .pz-registro {
+        display: grid;
+        gap: calc(var(--u) * 0.4);
+        max-height: calc(var(--u) * 16);
+        overflow-y: auto;
+        color: var(--fosforo-flojo);
+      }
+      .pz-registro p { margin: 0; }
+      .pz-eco { color: #ffbfa6; opacity: .75; }
+      .pz-linea { display: flex; gap: var(--u); align-items: center; }
+      .pz-signo { color: #ffbfa6; }
+      .pz-entrada {
         flex: 1;
         border: 0;
         padding: 0;
@@ -134,24 +242,53 @@
         color: inherit;
         font: inherit;
       }
-      #entrada:focus { outline: none; }
-      #entrada::placeholder { color: #cfe8c440; }
+      .pz-entrada:focus { outline: none; }
+      .pz-entrada::placeholder { color: #d5ecc94d; }
 
-      .boton {
-        justify-self: start;
+      .pz-pie {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--u);
+        padding: calc(var(--u) * 1.2) calc(var(--u) * 2.2);
+        border-top: 1px solid #d5ecc91f;
+      }
+      .pz-atras, .pz-consola-abrir {
         border: 0;
         cursor: pointer;
-        padding: 8px 16px;
+        background: #d5ecc914;
+        color: var(--fosforo);
+        font-family: var(--tipo);
+        font-size: calc(var(--u) * 1.7);
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        padding: calc(var(--u) * 0.9) calc(var(--u) * 1.8);
         border-radius: 999px;
-        background: var(--coral);
-        color: #fff;
+      }
+      .pz-atras[hidden] { visibility: hidden; display: block; }
+      .pz-consola-abrir { margin-left: auto; letter-spacing: 0; }
+      .pz-consola-abrir.activo { background: var(--coral); color: #fff; }
+
+      /* ─── salir y ajustes ─── */
+
+      #salir {
+        position: fixed;
+        left: 20px;
+        bottom: 20px;
+        display: none;
+        border: 0;
+        cursor: pointer;
+        padding: 11px 20px;
+        border-radius: 999px;
+        background: var(--chapa);
+        color: var(--tinta);
         font-family: var(--tipo);
         font-size: 10px;
         letter-spacing: .12em;
         text-transform: uppercase;
+        box-shadow: 0 3px 0 var(--surco), 0 8px 20px #00000026;
       }
-
-      /* ─── ajustes ─── */
+      #salir.visible { display: block; }
 
       #abrir-ajustes {
         position: fixed;
@@ -159,24 +296,25 @@
         bottom: 20px;
         border: 0;
         cursor: pointer;
-        padding: 10px 18px;
+        padding: 11px 20px;
         border-radius: 999px;
-        background: #2a2620;
-        color: #f6f1e4;
+        background: var(--chapa);
+        color: var(--tinta);
         font-family: var(--tipo);
         font-size: 10px;
         letter-spacing: .12em;
         text-transform: uppercase;
+        box-shadow: 0 3px 0 var(--surco), 0 8px 20px #00000026;
       }
       #ajustes {
         position: fixed;
         right: 20px;
-        bottom: 66px;
+        bottom: 68px;
         display: none;
         gap: 10px;
         padding: 16px;
         border-radius: 12px;
-        background: #fffefbe6;
+        background: #fffefbf2;
         backdrop-filter: blur(8px);
         box-shadow: 0 8px 28px #0000002b;
         font-size: 10px;
@@ -188,7 +326,7 @@
       #mandos { display: grid; gap: 9px; }
       #mandos label {
         display: grid;
-        grid-template-columns: 120px 130px 32px;
+        grid-template-columns: 116px 124px 30px;
         align-items: center;
         gap: 10px;
       }
@@ -196,51 +334,32 @@
       #mandos input { width: 100%; }
 
       @media (max-width: 720px) {
-        #ficha { right: 4vw; left: 4vw; width: auto; top: auto; bottom: 86px; translate: 0; max-height: 46vh; }
+        .chapa { flex-wrap: wrap; }
+        .chapa__marca { flex: 1 0 100%; }
         #ajustes { left: 20px; }
-        #mandos label { grid-template-columns: 1fr 1fr 30px; }
-        .lecturas { gap: 12px; }
+        #mandos label { grid-template-columns: 1fr 1fr 28px; }
       }
     </style>
   </head>
   <body>
     <canvas id="lienzo"></canvas>
 
-    <div class="rotulo">
-      <b>YTG-01</b>
-      consola de cultivo · zaragoza
-    </div>
-
-    <div class="lecturas">
-      <div><b id="lectura-hora">--:--</b><span>hora</span></div>
-      <div><b id="lectura-temperatura">--º</b><span>exterior</span></div>
-      <div><b id="lectura-meteo">—</b><span>cielo</span></div>
-      <div><b id="lectura-estacion">—</b><span>estación</span></div>
+    <div class="chapa">
+      <div class="chapa__marca">
+        <div class="chapa__modelo">YTG-01</div>
+        <span>consola de cultivo · zaragoza</span>
+      </div>
+      <div class="chapa__dato"><b id="lectura-hora">--:--</b><span>hora</span></div>
+      <div class="chapa__dato"><b id="lectura-temperatura">--º</b><span>exterior</span></div>
+      <div class="chapa__dato"><b id="lectura-meteo">—</b><span>cielo</span></div>
+      <div class="chapa__dato"><b id="lectura-estacion">—</b><span>estación</span></div>
     </div>
 
     <div id="pista"></div>
 
-    <div id="ficha">
-      <h2 id="ficha-titulo">consola de riego</h2>
-      <div id="ficha-cuerpo"></div>
+    <div id="visor"><div id="visor-interior"></div></div>
 
-      <div id="consola">
-        <div id="consola-log" aria-live="polite"></div>
-        <div class="linea">
-          <span class="prompt" aria-hidden="true">&gt;</span>
-          <input
-            id="entrada"
-            type="text"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            aria-label="consola de riego"
-            placeholder="ayuda" />
-        </div>
-      </div>
-
-      <button class="boton" id="volver" type="button">salir · esc</button>
-    </div>
+    <button id="salir" type="button">salir · esc</button>
 
     <button id="abrir-ajustes" type="button">ajustes</button>
     <div id="ajustes"><div id="mandos"></div></div>

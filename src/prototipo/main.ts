@@ -1,11 +1,11 @@
 // El aparato: escena, cámara y mandos.
 //
-// Tres vistas: general (el diorama girando), enfoque (sobre la pantalla o
-// sobre una planta) y subsuelo (al excavar). La cámara nunca salta, interpola.
+// Dos vistas. En la general el diorama gira despacio y se señalan las plantas.
+// Al pulsar la pantalla —o cualquier planta— la cámara baja a plomo sobre el
+// visor y la interfaz se coloca encima, proyectada sobre la pantalla real.
 
 import {
   ACESFilmicToneMapping,
-  Box3,
   Color,
   CylinderGeometry,
   Group,
@@ -22,14 +22,23 @@ import {
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import { ahora } from "../tiempo";
-import { construirEscena, CALIBRACION as ESCENA, type Interactivo } from "./escena";
-import { consultarMeteo, NOMBRES, RESERVA, type Meteo } from "./meteo";
-import { TramadoShader, CALIBRACION as TRAMA } from "./tramado";
+import { ahora } from "../tiempo.ts";
+import { ejecutar, type Estado } from "../consola.ts";
+import { construirEscena, CALIBRACION as ESCENA, type Interactivo } from "./escena.ts";
+import { montarInterfaz } from "./interfaz.ts";
+import { consultarMeteo, NOMBRES, RESERVA, type Meteo } from "./meteo.ts";
+import { TramadoShader, CALIBRACION as TRAMA } from "./tramado.ts";
 
 export const CALIBRACION = {
   // Suavizado de la cámara por fotograma. Subirlo la hace más seca.
-  SUAVIZADO: 0.055,
+  SUAVIZADO: 0.07,
+  // Altura de la cámara sobre el visor al enfocarlo. Bajarlo lo agranda.
+  ALTURA_VISOR: 7.4,
+  // Retranqueo del enfoque. A 0 la cámara cae a plomo y la proyección es
+  // un rectángulo perfecto, pero se pierde toda sensación de volumen.
+  SESGO_VISOR: 2.3,
+  // Margen que se recorta del visor para que no se monte sobre el bisel.
+  MARGEN_VISOR: 0.94,
   // Cada cuánto se vuelve a consultar el tiempo de Zaragoza, en minutos.
   REFRESCO_METEO: 10,
 };
@@ -64,19 +73,7 @@ addEventListener("resize", medir);
 
 type Vista = { pos: Vector3; mira: Vector3; quieto: boolean };
 
-// Encuadre del enfoque sobre la pantalla del aparato.
-const VISTA_PANTALLA: Vista = {
-  pos: new Vector3(1.1, 9.2, 10.0),
-  mira: new Vector3(0.5, 0.2, -0.1),
-  quieto: true,
-};
-
-// Vista del subsuelo al excavar: la cámara baja hasta el corte de estratos.
-const VISTA_SUBSUELO: Vista = {
-  pos: new Vector3(13.5, -2.2, 13.5),
-  mira: new Vector3(0, -4.2, 0),
-  quieto: true,
-};
+const pantalla = interactivos.find((i) => i.nombre === "pantalla")!.malla as Mesh;
 
 function vistaGeneral(): Vista {
   return {
@@ -90,14 +87,16 @@ function vistaGeneral(): Vista {
   };
 }
 
-/** Encuadre de una planta concreta, a partir de su sitio en el diorama. */
-function vistaDe(objeto: Interactivo): Vista {
-  const caja = new Box3().setFromObject(objeto.malla);
-  const centro = caja.getCenter(new Vector3());
-  const alto = Math.max(caja.max.y - caja.min.y, 1);
+/** Encuadre sobre el visor: la cámara cae casi a plomo y la pantalla manda. */
+function vistaVisor(): Vista {
+  const centro = pantalla.getWorldPosition(new Vector3());
   return {
-    pos: new Vector3(centro.x + alto * 1.5, centro.y + alto * 1.1, centro.z + alto * 2.1),
-    mira: new Vector3(centro.x, centro.y * 0.6, centro.z),
+    pos: new Vector3(
+      centro.x,
+      centro.y + CALIBRACION.ALTURA_VISOR,
+      centro.z + CALIBRACION.SESGO_VISOR,
+    ),
+    mira: centro.clone(),
     quieto: true,
   };
 }
@@ -105,105 +104,75 @@ function vistaDe(objeto: Interactivo): Vista {
 let objetivo: Vista = vistaGeneral();
 const posActual = objetivo.pos.clone();
 const miraActual = objetivo.mira.clone();
-let enfocado = false;
+let enVisor = false;
 
-const ficha = document.getElementById("ficha")!;
-const fichaTitulo = document.getElementById("ficha-titulo")!;
-const fichaCuerpo = document.getElementById("ficha-cuerpo")!;
+const visor = document.getElementById("visor")!;
+const salir = document.getElementById("salir")!;
+
+// Tiempo que tarda la interfaz en encenderse, para que aparezca cuando la
+// cámara ya casi ha llegado y no a mitad del viaje.
+const ESPERA_VISOR = 420;
+let encendido: ReturnType<typeof setTimeout> | undefined;
+
+function entrarEnVisor() {
+  // el diorama se endereza para que la pantalla mire a cámara
+  objetivo = { ...vistaVisor(), quieto: true };
+  enVisor = true;
+  visor.classList.add("montado");
+  salir.classList.add("visible");
+  clearTimeout(encendido);
+  encendido = setTimeout(() => visor.classList.add("visible"), ESPERA_VISOR);
+}
 
 function volverAGeneral() {
   objetivo = vistaGeneral();
-  enfocado = false;
-  ficha.classList.remove("visible");
+  enVisor = false;
+  clearTimeout(encendido);
+  visor.classList.remove("montado", "visible");
+  salir.classList.remove("visible");
 }
 
-/* ─── señalar y pulsar ──────────────────────────────────────── */
+/* ─── el visor, proyectado sobre la pantalla de verdad ──────── */
 
-const rayo = new Raycaster();
-const puntero = new Vector2();
-let senalado: Interactivo | null = null;
-let hayPuntero = false;
+// Esquinas de la cara superior de la pantalla, en su propio espacio local.
+const ESQUINAS = [
+  new Vector3(-1.15, 0.05, -0.8),
+  new Vector3(1.15, 0.05, -0.8),
+  new Vector3(1.15, 0.05, 0.8),
+  new Vector3(-1.15, 0.05, 0.8),
+];
+const proyectada = new Vector3();
 
-const pista = document.getElementById("pista")!;
+function colocarVisor() {
+  if (!enVisor) return;
 
-addEventListener("pointermove", (e) => {
-  hayPuntero = true;
-  puntero.x = (e.clientX / innerWidth) * 2 - 1;
-  puntero.y = -(e.clientY / innerHeight) * 2 + 1;
-  objetivoX = (e.clientX / innerWidth - 0.5) * 2;
-  objetivoY = (e.clientY / innerHeight - 0.5) * 2;
-});
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
 
-function repasarSenalado() {
-  if (!hayPuntero) return;
-  rayo.setFromCamera(puntero, camera);
-  const toca = rayo.intersectObjects(interactivos.map((i) => i.malla), true)[0];
-
-  let nuevo: Interactivo | null = null;
-  if (toca) {
-    // el rayo devuelve la malla concreta; hay que subir hasta el interactivo
-    for (let o: typeof toca.object | null = toca.object; o; o = o.parent) {
-      const encontrado = interactivos.find((i) => i.malla === o);
-      if (encontrado) {
-        nuevo = encontrado;
-        break;
-      }
-    }
+  for (const esquina of ESQUINAS) {
+    proyectada.copy(esquina).applyMatrix4(pantalla.matrixWorld).project(camera);
+    const x = ((proyectada.x + 1) / 2) * innerWidth;
+    const y = ((1 - proyectada.y) / 2) * innerHeight;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
   }
 
-  if (nuevo !== senalado) {
-    senalado = nuevo;
-    document.body.style.cursor = nuevo ? "pointer" : "default";
-    pista.textContent = nuevo?.etiqueta ?? "";
-    pista.classList.toggle("visible", Boolean(nuevo));
-  }
+  const ancho = (maxX - minX) * CALIBRACION.MARGEN_VISOR;
+  const alto = (maxY - minY) * CALIBRACION.MARGEN_VISOR;
+  visor.style.left = `${minX + ((maxX - minX) - ancho) / 2}px`;
+  visor.style.top = `${minY + ((maxY - minY) - alto) / 2}px`;
+  visor.style.width = `${ancho}px`;
+  visor.style.height = `${alto}px`;
+  // la tipografía de la pantalla escala con la pantalla, no con la ventana
+  visor.style.setProperty("--u", `${alto / 38}px`);
+
 }
 
-lienzo.addEventListener("click", () => {
-  if (!senalado) {
-    if (enfocado) volverAGeneral();
-    return;
-  }
-  if (senalado.nombre === "pantalla") {
-    objetivo = VISTA_PANTALLA;
-    enfocado = true;
-    mostrarConsola();
-  } else if (senalado.nombre.startsWith("planta:") || senalado.nombre.startsWith("etiqueta:")) {
-    objetivo = vistaDe(senalado);
-    enfocado = true;
-    mostrarFicha(senalado);
-  } else if (senalado.nombre.startsWith("comando:")) {
-    // las teclas de colores del aparato son atajos de la consola
-    lanzar(senalado.nombre.slice("comando:".length));
-  }
-});
-
-addEventListener("keydown", (e) => {
-  if (e.key === "Escape") volverAGeneral();
-});
-
-document.getElementById("volver")!.addEventListener("click", volverAGeneral);
-
-/* ─── contenido de la ficha ─────────────────────────────────── */
-
-import { ARBOLES, ARBUSTOS, ETIQUETAS } from "../jardin-datos.ts";
-import { completar, ejecutar, type Efecto, type Estado } from "../consola.ts";
-
-function mostrarTexto(titulo: string, lineas: string[]) {
-  fichaTitulo.textContent = titulo;
-  fichaCuerpo.innerHTML = lineas.map((l) => `<p>${l}</p>`).join("");
-  ficha.classList.add("visible");
-}
-
-function mostrarConsola() {
-  mostrarTexto("consola de riego", [
-    "escribe <b>ayuda</b> para ver los comandos.",
-    "o pulsa una planta para abrir su ficha.",
-  ]);
-  entrada.focus();
-}
-
-/* ─── la consola ────────────────────────────────────────────── */
+/* ─── estado del jardín ─────────────────────────────────────── */
 
 // Mientras no exista el Worker, lo que riegas y lo que plantas vive en tu
 // navegador. Cuando entre D1 esto pasa a ser estado compartido de verdad.
@@ -223,7 +192,6 @@ function cargarEstado(): Estado {
     const crudo = localStorage.getItem(LLAVE);
     if (!crudo) return base;
     const guardado = JSON.parse(crudo) as Partial<Estado> & { dia?: string };
-    // el cupo de riego se renueva cada día
     const hoy = new Date().toISOString().slice(0, 10);
     return {
       ...base,
@@ -249,98 +217,18 @@ function guardarEstado() {
 }
 
 const estado = cargarEstado();
-const entrada = document.getElementById("entrada") as HTMLInputElement;
-const registro = document.getElementById("consola-log")!;
-const historial: string[] = [];
-let puestoHistorial = -1;
 
-function escribir(lineas: string[], eco?: string) {
-  if (eco) {
-    const p = document.createElement("p");
-    p.className = "eco";
-    p.textContent = `> ${eco}`;
-    registro.append(p);
-  }
-  for (const linea of lineas) {
-    const p = document.createElement("p");
-    p.innerHTML = linea;
-    registro.append(p);
-  }
-  registro.scrollTop = registro.scrollHeight;
-}
-
-function aplicarEfecto(efecto: Efecto) {
-  switch (efecto.tipo) {
-    case "enfocar": {
-      const destino = interactivos.find((i) => i.slug === efecto.slug);
-      if (destino) {
-        objetivo = vistaDe(destino);
-        enfocado = true;
-      }
-      break;
-    }
-    case "excavar":
-      objetivo = VISTA_SUBSUELO;
-      enfocado = true;
-      break;
-    case "subir":
-      objetivo = vistaGeneral();
-      enfocado = false;
-      break;
-    case "salir":
-      volverAGeneral();
-      break;
-    case "regar":
-      palmear(efecto.slug);
-      break;
-    case "plantar":
-      brotar();
-      break;
-    case "sonido":
-      escribir(["el altavoz está montado pero todavía no hay pistas dentro."]);
-      break;
-  }
-}
-
-function lanzar(orden: string) {
+function correr(orden: string) {
   const t = ahora();
   estado.estacion = t.estacion;
   estado.hora24 = horaForzada < 0 ? t.hora24 : horaForzada;
-
   const respuesta = ejecutar(orden, estado);
-  ficha.classList.add("visible");
-  escribir(respuesta.lineas, orden);
-  if (respuesta.efecto) aplicarEfecto(respuesta.efecto);
   guardarEstado();
+  return respuesta;
 }
 
-entrada.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    const orden = entrada.value.trim();
-    if (!orden) return;
-    historial.unshift(orden);
-    puestoHistorial = -1;
-    entrada.value = "";
-    lanzar(orden);
-  } else if (e.key === "Tab") {
-    e.preventDefault();
-    const sugerido = completar(entrada.value);
-    if (sugerido) entrada.value = sugerido;
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    if (puestoHistorial + 1 < historial.length) {
-      puestoHistorial += 1;
-      entrada.value = historial[puestoHistorial]!;
-    }
-  } else if (e.key === "ArrowDown") {
-    e.preventDefault();
-    puestoHistorial = Math.max(puestoHistorial - 1, -1);
-    entrada.value = puestoHistorial < 0 ? "" : historial[puestoHistorial]!;
-  }
-  e.stopPropagation();
-});
+/* ─── respingos y flores ────────────────────────────────────── */
 
-/** Un riego: la planta da un respingo. */
 const palmadas = new Map<Object3D, number>();
 
 function palmear(slug: string) {
@@ -363,50 +251,118 @@ function brotar() {
   petalo.position.y = 0.36;
   const flor = new Group();
   flor.add(tallo, petalo);
-  flor.position.set(Math.cos(a) * 5.0, 0, Math.sin(a) * 5.0);
+  flor.position.set(Math.cos(a) * 5.05, 0, Math.sin(a) * 5.05);
   flor.castShadow = true;
   diorama.add(flor);
 }
 
-function mostrarFicha(objeto: Interactivo) {
-  const slug = objeto.slug ?? "";
+/* ─── la interfaz de la pantalla ────────────────────────────── */
 
-  const arbol = ARBOLES.find((a) => a.slug === slug);
-  if (arbol) {
-    const hasta = arbol.hasta ?? "hoy";
-    mostrarTexto(arbol.nombre, [
-      `<b>${arbol.rol}</b> · ${arbol.desde} — ${hasta}`,
-      arbol.resumen,
-      ...arbol.notas.map((n) => `· ${n.texto}`),
-    ]);
+const pz = montarInterfaz(document.getElementById("visor-interior")!, {
+  // no movemos la cámara: estamos leyendo en la pantalla. La planta da un
+  // respingo para que se sepa cuál es al volver a la vista general.
+  enfocar: palmear,
+  excavar: () => {},
+  salir: volverAGeneral,
+  regar: (slug) => {
+    const r = correr(`regar ${slug}`);
+    if (r.efecto?.tipo === "regar") palmear(slug);
+    return r;
+  },
+  plantar: () => {
+    const r = correr("plantar");
+    if (r.efecto?.tipo === "plantar") brotar();
+    return r;
+  },
+  ejecutarTexto: (orden) => {
+    const r = correr(orden);
+    if (r.efecto?.tipo === "regar") palmear(r.efecto.slug);
+    if (r.efecto?.tipo === "plantar") brotar();
+    if (r.efecto?.tipo === "salir") volverAGeneral();
+    return r;
+  },
+  riegosDe: (slug) => estado.riegos[slug] ?? 0,
+  riegosRestantes: () => estado.miRiegosRestantes,
+  haPlantado: () => estado.haPlantado,
+});
+
+/* ─── señalar y pulsar ──────────────────────────────────────── */
+
+const rayo = new Raycaster();
+const puntero = new Vector2();
+let senalado: Interactivo | null = null;
+let hayPuntero = false;
+let objetivoX = 0;
+let objetivoY = 0;
+
+const pista = document.getElementById("pista")!;
+
+addEventListener("pointermove", (e) => {
+  hayPuntero = true;
+  puntero.x = (e.clientX / innerWidth) * 2 - 1;
+  puntero.y = -(e.clientY / innerHeight) * 2 + 1;
+  objetivoX = (e.clientX / innerWidth - 0.5) * 2;
+  objetivoY = (e.clientY / innerHeight - 0.5) * 2;
+});
+
+function repasarSenalado() {
+  if (!hayPuntero || enVisor) {
+    if (senalado) {
+      senalado = null;
+      pista.classList.remove("visible");
+      document.body.style.cursor = "default";
+    }
     return;
   }
 
-  const arbusto = ARBUSTOS.find((a) => a.slug === slug);
-  if (arbusto) {
-    mostrarTexto(arbusto.nombre, [
-      arbusto.resumen,
-      arbusto.repo ? `<b>github.com/${arbusto.repo}</b>` : "",
-    ].filter(Boolean));
-    return;
+  rayo.setFromCamera(puntero, camera);
+  const toca = rayo.intersectObjects(interactivos.map((i) => i.malla), true)[0];
+
+  let nuevo: Interactivo | null = null;
+  if (toca) {
+    for (let o: Object3D | null = toca.object; o; o = o.parent) {
+      const encontrado = interactivos.find((i) => i.malla === o);
+      if (encontrado) {
+        nuevo = encontrado;
+        break;
+      }
+    }
   }
 
-  const cert = ETIQUETAS.find((c) => c.codigo === slug);
-  if (cert) {
-    mostrarTexto(cert.codigo, [
-      cert.nombre,
-      cert.estado === "pendiente" ? "etiqueta sin clavar. todavía." : "obtenida.",
-    ]);
+  if (nuevo !== senalado) {
+    senalado = nuevo;
+    document.body.style.cursor = nuevo ? "pointer" : "default";
+    pista.textContent = nuevo?.etiqueta ?? "";
+    pista.classList.toggle("visible", Boolean(nuevo));
   }
 }
+
+lienzo.addEventListener("click", () => {
+  if (enVisor || !senalado) return;
+
+  if (senalado.slug) {
+    // pulsar una planta abre su ficha en el visor: se lee en el aparato
+    entrarEnVisor();
+    pz.abrirFicha(senalado.slug);
+  } else if (senalado.nombre === "pantalla" || senalado.nombre.startsWith("comando:")) {
+    entrarEnVisor();
+    pz.abrirIndice();
+  }
+});
+
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape") volverAGeneral();
+});
+salir.addEventListener("click", volverAGeneral);
 
 /* ─── el tiempo de Zaragoza ─────────────────────────────────── */
 
 let meteo: Meteo = RESERVA;
-
-// -1 = hora real de Zaragoza. Cualquier otro valor la fuerza, para poder ver
-// el jardín de noche a mediodía y al revés.
+// -1 = hora real de Zaragoza. Cualquier otro valor la fuerza.
 let horaForzada = -1;
+// Los mandos no pisan la lectura real: se guardan aparte y se mezclan.
+let nubesForzadas = -1;
+let lluviaForzada = -1;
 
 const lecturas = {
   meteo: document.getElementById("lectura-meteo"),
@@ -417,14 +373,34 @@ const lecturas = {
 
 function pintarLecturas() {
   const t = ahora();
-  if (lecturas.meteo) lecturas.meteo.textContent = NOMBRES[meteo.cielo];
-  if (lecturas.temperatura) lecturas.temperatura.textContent = `${Math.round(meteo.temperatura)}º`;
   const hora = horaForzada < 0 ? t.hora24 : horaForzada;
-  if (lecturas.hora) {
-    lecturas.hora.textContent = horaForzada < 0 ? t.hora : `${String(hora).padStart(2, "0")}:00`;
-  }
+
+  const lluvia = lluviaForzada < 0 ? meteo.precipitacion : lluviaForzada;
+  const mezclaNubosidad = nubesForzadas < 0 ? meteo.nubosidad : nubesForzadas;
+  const mezcla: Meteo = {
+    ...meteo,
+    nubosidad: mezclaNubosidad,
+    precipitacion: lluvia,
+    // al soltar el mando de lluvia el cielo vuelve a lo que diga la lectura real
+    cielo:
+      lluviaForzada < 0
+        ? meteo.cielo
+        : lluvia > 0
+          ? "lluvia"
+          : mezclaNubosidad > 0.5
+            ? "nubes"
+            : "despejado",
+  };
+
+  if (lecturas.meteo) lecturas.meteo.textContent = NOMBRES[mezcla.cielo];
+  if (lecturas.temperatura) lecturas.temperatura.textContent = `${Math.round(mezcla.temperatura)}º`;
   if (lecturas.estacion) lecturas.estacion.textContent = t.estacion;
-  cielo.aplicar(meteo, hora);
+
+  const textoHora = horaForzada < 0 ? t.hora : `${String(hora).padStart(2, "0")}:00`;
+  if (lecturas.hora) lecturas.hora.textContent = textoHora;
+  pz.reloj(textoHora);
+
+  cielo.aplicar(mezcla, hora);
 }
 
 async function refrescarMeteo() {
@@ -443,8 +419,7 @@ const reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let giro = 0;
 let balanceoX = 0;
 let balanceoY = 0;
-let objetivoX = 0;
-let objetivoY = 0;
+let suelto = 1;
 let anterior = performance.now();
 
 function cuadro(instante: number) {
@@ -457,20 +432,25 @@ function cuadro(instante: number) {
   balanceoX += (objetivoY * rad - balanceoX) * 0.05;
   balanceoY += (objetivoX * rad - balanceoY) * 0.05;
 
-  // al enfocar, el diorama se frena y se endereza para mirar de frente
-  const sueltoObjetivo = objetivo.quieto ? 0 : 1;
-  const suelto = (diorama.userData["suelto"] as number | undefined) ?? 1;
-  const nuevoSuelto = suelto + (sueltoObjetivo - suelto) * CALIBRACION.SUAVIZADO * 2;
-  diorama.userData["suelto"] = nuevoSuelto;
-  diorama.rotation.y = (giro + balanceoY) * nuevoSuelto;
-  diorama.rotation.x = balanceoX * 0.4 * nuevoSuelto;
+  // al enfocar, el diorama se frena y se endereza
+  suelto += ((objetivo.quieto ? 0 : 1) - suelto) * CALIBRACION.SUAVIZADO;
+  diorama.rotation.y = (giro + balanceoY) * suelto;
+  diorama.rotation.x = balanceoX * 0.4 * suelto;
+  diorama.updateMatrixWorld();
+
+  // el encuadre del visor depende de dónde haya quedado la pantalla
+  if (enVisor) {
+    const v = vistaVisor();
+    objetivo.pos.copy(v.pos);
+    objetivo.mira.copy(v.mira);
+  }
 
   posActual.lerp(objetivo.pos, CALIBRACION.SUAVIZADO);
   miraActual.lerp(objetivo.mira, CALIBRACION.SUAVIZADO);
   camera.position.copy(posActual);
   camera.lookAt(miraActual);
+  camera.updateMatrixWorld();
 
-  // respingo de las plantas recién regadas
   for (const [malla, t] of palmadas) {
     const avance = t + dt * 2.6;
     if (avance >= 1) {
@@ -483,6 +463,7 @@ function cuadro(instante: number) {
   }
 
   cielo.animar(dt, camera.position);
+  colocarVisor();
   repasarSenalado();
   composer.render();
   requestAnimationFrame(cuadro);
@@ -491,37 +472,32 @@ requestAnimationFrame(cuadro);
 
 /* ─── ajustes ───────────────────────────────────────────────── */
 
-const mandos: [string, string, number, number, number, (v: number) => void][] = [
-  ["fuerza", "tramado (0 = sin)", 0, 1, TRAMA.FUERZA, (v) => (pasoTramado.uniforms["uFuerza"]!.value = v)],
-  ["niveles", "niveles de color", 2, 24, TRAMA.NIVELES, (v) => (pasoTramado.uniforms["uNiveles"]!.value = v)],
-  ["grano", "grano de trama", 1, 8, TRAMA.GRANO, (v) => (pasoTramado.uniforms["uGrano"]!.value = v)],
-  ["distancia", "distancia", 10, 34, ESCENA.DISTANCIA, (v) => {
+const mandos: [string, string, number, number, number, number, (v: number) => void][] = [
+  ["fuerza", "grano de trama", 0, 1, 0.05, TRAMA.FUERZA, (v) => (pasoTramado.uniforms["uFuerza"]!.value = v)],
+  ["niveles", "niveles de color", 2, 24, 1, TRAMA.NIVELES, (v) => (pasoTramado.uniforms["uNiveles"]!.value = v)],
+  ["tamano", "tamaño del píxel", 1, 6, 1, TRAMA.GRANO, (v) => (pasoTramado.uniforms["uGrano"]!.value = v)],
+  ["distancia", "distancia", 12, 34, 1, ESCENA.DISTANCIA, (v) => {
     ESCENA.DISTANCIA = v;
-    if (!enfocado) objetivo = vistaGeneral();
+    if (!enVisor) objetivo = vistaGeneral();
   }],
-  ["altura", "altura", 0.1, 1, ESCENA.ALTURA, (v) => {
-    ESCENA.ALTURA = v;
-    if (!enfocado) objetivo = vistaGeneral();
-  }],
-  ["giro", "giro", 0, 12, ESCENA.GIRO, (v) => (ESCENA.GIRO = v)],
-  ["hora", "hora (-1 = real)", -1, 23, -1, (v) => {
+  ["giro", "giro", 0, 8, 0.2, ESCENA.GIRO, (v) => (ESCENA.GIRO = v)],
+  ["hora", "hora (-1 = real)", -1, 23, 1, -1, (v) => {
     horaForzada = v;
     pintarLecturas();
   }],
-  ["nubes", "nubosidad", 0, 1, RESERVA.nubosidad, (v) => {
-    meteo = { ...meteo, nubosidad: v };
+  ["nubes", "nubes (-1 = real)", -1, 1, 0.05, -1, (v) => {
+    nubesForzadas = v;
     pintarLecturas();
   }],
-  ["lluvia", "lluvia (mm)", 0, 4, 0, (v) => {
-    meteo = { ...meteo, precipitacion: v, cielo: v > 0 ? "lluvia" : meteo.cielo };
+  ["lluvia", "lluvia (-1 = real)", -1, 4, 0.25, -1, (v) => {
+    lluviaForzada = v;
     pintarLecturas();
   }],
 ];
 
 const panel = document.getElementById("mandos")!;
-for (const [id, etiqueta, min, max, valor, aplicar] of mandos) {
+for (const [id, etiqueta, min, max, paso, valor, aplicar] of mandos) {
   const fila = document.createElement("label");
-  const paso = max <= 1 ? 0.02 : max <= 12 ? 0.1 : 1;
   fila.innerHTML =
     `<span>${etiqueta}</span>` +
     `<input type="range" id="${id}" min="${min}" max="${max}" step="${paso}" value="${valor}">` +
