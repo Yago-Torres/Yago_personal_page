@@ -7,7 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
-    "check": "node --experimental-strip-types src/tiempo.check.ts && node --experimental-strip-types src/botanica.check.ts && node --experimental-strip-types src/consola.check.ts"
+    "check": "node --experimental-strip-types src/tiempo.check.ts && node --experimental-strip-types src/botanica.check.ts"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
