@@ -1,37 +1,37 @@
-// La página: enchufa el objeto 3D, el tiempo real de Zaragoza y la marca del
-// visitante. Todo el contenido vive en el HTML; aquí solo se le da vida.
+// La página: el parte del tiempo de la ciudad elegida, y la azotea que lo
+// obedece. Todo el contenido vive en el HTML; aquí solo se le da vida.
 
-import { montarEscena, leerPlantasDelDocumento } from "./escena.ts";
-import { consultarMeteo, NOMBRES, RESERVA, type Meteo } from "./meteo.ts";
+import { montarEscena, type Faena } from "./escena.ts";
+import { CIUDADES, consultarMeteo, NOMBRES, RESERVA, rosa, type Ciudad, type Meteo } from "./meteo.ts";
 import { ahora } from "./tiempo.ts";
 
 export const CALIBRACION = {
-  // Franja nocturna en Zaragoza: fuera de ella la página se da la vuelta.
-  AMANECE: 7,
-  ANOCHECE: 21,
   // Cada cuánto se vuelve a consultar el tiempo, en minutos.
-  REFRESCO_METEO: 10,
+  REFRESCO: 10,
   // Caracteres del mensaje. Más allá deja de ser un titular.
   LARGO_MARCA: 42,
+  // Segundos que Yago se queda haciendo la faena que se señala en el pronóstico.
+  OJEADA: 2.6,
 };
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
+const pon = (sel: string, texto: string) => {
+  const el = $(sel);
+  if (el) el.textContent = texto;
+};
 
-/* ─── el objeto ─────────────────────────────────────────────── */
+/* ─── la azotea ─────────────────────────────────────────────── */
 
 const lienzo = $<HTMLCanvasElement>("#lienzo");
-const escena = lienzo ? montarEscena(lienzo, leerPlantasDelDocumento()) : null;
+const escena = lienzo ? montarEscena(lienzo) : null;
 
-if (escena) {
+if (escena && lienzo) {
   escena.medir();
   addEventListener("resize", escena.medir);
 
-  // el objeto solo gira mientras se ve: si está fuera de pantalla, se para
   let aLaVista = true;
-  if (lienzo) {
-    new IntersectionObserver(([e]) => (aLaVista = e!.isIntersecting), { threshold: 0.05 })
-      .observe(lienzo);
-  }
+  new IntersectionObserver(([e]) => (aLaVista = e!.isIntersecting), { threshold: 0.05 })
+    .observe(lienzo);
 
   addEventListener("pointermove", (e) => {
     if (e.pointerType === "touch") return;
@@ -40,67 +40,141 @@ if (escena) {
 
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let anterior = performance.now();
-
   const cuadro = (t: number) => {
     const dt = Math.min((t - anterior) / 1000, 0.1);
     anterior = t;
-    if (aLaVista) {
-      escena.cuadro(dt, quieto);
-      escena.animarPalmadas(dt);
-    }
+    if (aLaVista) escena.cuadro(dt, quieto);
     requestAnimationFrame(cuadro);
   };
   requestAnimationFrame(cuadro);
+}
 
-  // señalar una etapa o un proyecto hace que su planta dé un respingo
-  for (const el of document.querySelectorAll<HTMLElement>("[data-planta]")) {
-    const slug = el.dataset["planta"]!;
-    el.addEventListener("pointerenter", () => escena.palmear(slug));
-    el.addEventListener("focusin", () => escena.palmear(slug));
+/* ─── qué hace Yago ─────────────────────────────────────────── */
+
+const FAENAS: Record<Faena, string> = {
+  regar: "Yago riega las macetas",
+  trabajar: "Yago se ha puesto a trabajar",
+  paraguas: "Yago ha sacado el paraguas",
+};
+
+let faenaReal: Faena = "regar";
+let ojeada: ReturnType<typeof setTimeout> | undefined;
+
+function ponerFaena(f: Faena) {
+  escena?.hacer(f);
+  pon("#escena-pie", FAENAS[f]);
+}
+
+/** El pronóstico deja asomarse: al señalar una etapa, Yago la representa. */
+for (const fila of document.querySelectorAll<HTMLElement>(".dia[data-faena]")) {
+  const f = fila.dataset["faena"] as Faena;
+  const asomar = () => {
+    clearTimeout(ojeada);
+    ponerFaena(f);
+    ojeada = setTimeout(() => ponerFaena(faenaReal), CALIBRACION.OJEADA * 1000);
+  };
+  fila.addEventListener("pointerenter", asomar);
+  fila.addEventListener("focusin", asomar);
+}
+
+/* ─── el viento: las barras del stack ───────────────────────── */
+
+// se llenan al entrar en pantalla, para que se vea el gesto
+const rachas = [...document.querySelectorAll<HTMLElement>(".racha")];
+const llenar = (el: HTMLElement) => {
+  const barra = el.querySelector<HTMLElement>(".racha__barra i");
+  if (barra) barra.style.width = `${el.dataset["fuerza"] ?? 0}%`;
+};
+if (rachas.length) {
+  const ojo = new IntersectionObserver(
+    (entradas) => {
+      for (const e of entradas) {
+        if (!e.isIntersecting) continue;
+        llenar(e.target as HTMLElement);
+        ojo.unobserve(e.target);
+      }
+    },
+    { threshold: 0.3 },
+  );
+  for (const r of rachas) ojo.observe(r);
+}
+
+/* ─── ciudad y parte del tiempo ─────────────────────────────── */
+
+const LLAVE_CIUDAD = "ytg01.ciudad";
+
+function ciudadGuardada(): Ciudad {
+  try {
+    const c = localStorage.getItem(LLAVE_CIUDAD);
+    if (c && c in CIUDADES) return c as Ciudad;
+  } catch {
+    // almacenamiento bloqueado: se empieza por Zaragoza y ya está
   }
+  return "zaragoza";
 }
 
-/* ─── barras del stack ──────────────────────────────────────── */
-
-for (const el of document.querySelectorAll<HTMLElement>(".estrato")) {
-  const peso = Number(el.dataset["peso"] ?? 1);
-  const barra = el.querySelector<HTMLElement>(".barra-nivel i");
-  if (barra) barra.style.width = `${(peso / 3) * 100}%`;
-}
-
-/* ─── hora, tiempo y turno ──────────────────────────────────── */
-
+let ciudad: Ciudad = ciudadGuardada();
 let meteo: Meteo = RESERVA;
 
-function pintarLecturas() {
+function pintar() {
   const t = ahora();
-  const noche = t.hora24 < CALIBRACION.AMANECE || t.hora24 >= CALIBRACION.ANOCHECE;
+  const noche = !meteo.esDeDia;
 
   document.documentElement.dataset["turno"] = noche ? "noche" : "dia";
   const tema = $<HTMLMetaElement>('meta[name="theme-color"]');
   if (tema) tema.content = noche ? "#14130f" : "#ece9e2";
 
-  const pon = (sel: string, texto: string) => {
-    const el = $(sel);
-    if (el) el.textContent = texto;
-  };
-  pon("#lectura-hora", t.hora);
-  pon("#lectura-temperatura", `${Math.round(meteo.temperatura)}°`);
-  pon("#lectura-meteo", NOMBRES[meteo.cielo]);
-  pon("#lectura-estacion", t.estacion);
+  pon("#ciudad-nombre", CIUDADES[ciudad].nombre);
+  pon("#ahora-temp", `${Math.round(meteo.temperatura)}°`);
+  pon("#ahora-cielo", NOMBRES[meteo.cielo]);
+  pon("#ahora-sensacion", `${Math.round(meteo.sensacion)}°`);
+  pon("#ahora-hora", t.hora);
+  pon("#dato-viento", `${Math.round(meteo.viento)} km/h ${rosa(meteo.rumbo)}`);
+  pon("#dato-humedad", `${Math.round(meteo.humedad)}%`);
+  pon("#dato-lluvia", `${meteo.precipitacion.toFixed(1)} mm`);
+  pon("#dato-estacion", t.estacion);
+
+  // el amanecer y el atardecer de verdad, junto a los de la carrera
+  const arco = document.querySelectorAll<HTMLElement>(".arco__hito .rotulillo");
+  if (arco.length === 2 && meteo.real) {
+    arco[0]!.textContent = `Amanece ${meteo.amanecer} · 2022`;
+    arco[1]!.textContent = `Se pone ${meteo.atardecer} · 2026`;
+  }
+
+  const llueve = meteo.precipitacion > 0 || meteo.cielo === "lluvia" || meteo.cielo === "tormenta";
+  faenaReal = llueve ? "paraguas" : noche ? "trabajar" : "regar";
+  clearTimeout(ojeada);
+  ponerFaena(faenaReal);
 
   escena?.pintar(noche ? "noche" : "dia");
-  escena?.llover(meteo.precipitacion > 0 || meteo.cielo === "lluvia" || meteo.cielo === "tormenta");
+  escena?.soplar(meteo.viento);
 }
 
-pintarLecturas();
-void consultarMeteo().then((m) => {
-  meteo = m;
-  pintarLecturas();
-});
-setInterval(() => void consultarMeteo().then((m) => { meteo = m; pintarLecturas(); }),
-  CALIBRACION.REFRESCO_METEO * 60_000);
-setInterval(pintarLecturas, 60_000);
+async function traerMeteo() {
+  meteo = await consultarMeteo(ciudad);
+  pintar();
+}
+
+for (const b of document.querySelectorAll<HTMLButtonElement>("[data-ciudad]")) {
+  b.addEventListener("click", () => {
+    ciudad = b.dataset["ciudad"] as Ciudad;
+    for (const otro of document.querySelectorAll<HTMLButtonElement>("[data-ciudad]")) {
+      otro.setAttribute("aria-pressed", String(otro === b));
+    }
+    try {
+      localStorage.setItem(LLAVE_CIUDAD, ciudad);
+    } catch {
+      // si no se puede recordar, tampoco pasa nada
+    }
+    void traerMeteo();
+  });
+  b.setAttribute("aria-pressed", String(b.dataset["ciudad"] === ciudad));
+}
+
+pintar();
+void traerMeteo();
+setInterval(() => void traerMeteo(), CALIBRACION.REFRESCO * 60_000);
+setInterval(pintar, 60_000);
 
 const anio = $("#anio");
 if (anio) anio.textContent = String(new Date().getFullYear());
@@ -109,11 +183,10 @@ if (anio) anio.textContent = String(new Date().getFullYear());
 
 // Mientras no exista el Worker esto vive en el navegador de cada visitante.
 // Al pasar a estado compartido, el mensaje necesita moderación antes de salir.
-const LLAVE = "ytg01.marca";
+const LLAVE_MARCA = "ytg01.marca";
 
 const campo = $<HTMLInputElement>("#campo-marca");
 const cuenta = $("#cuenta-marca");
-const borrar = $("#borrar-marca");
 const eco = $("#marca-eco");
 
 function pintarMarca(texto: string) {
@@ -123,31 +196,30 @@ function pintarMarca(texto: string) {
     eco.textContent = limpio;
     eco.hidden = limpio.trim().length === 0;
   }
-  escena?.florecer(limpio.trim().length > 0);
 }
 
 if (campo) {
   try {
-    campo.value = localStorage.getItem(LLAVE) ?? "";
+    campo.value = localStorage.getItem(LLAVE_MARCA) ?? "";
   } catch {
-    // almacenamiento bloqueado: se empieza en blanco y ya está
+    // almacenamiento bloqueado: se empieza en blanco
   }
   pintarMarca(campo.value);
 
   campo.addEventListener("input", () => {
     pintarMarca(campo.value);
     try {
-      localStorage.setItem(LLAVE, campo.value);
+      localStorage.setItem(LLAVE_MARCA, campo.value);
     } catch {
-      // igual que arriba: no pasa nada, solo no se recuerda
+      // igual que arriba
     }
   });
 
-  borrar?.addEventListener("click", () => {
+  $("#borrar-marca")?.addEventListener("click", () => {
     campo.value = "";
     pintarMarca("");
     try {
-      localStorage.removeItem(LLAVE);
+      localStorage.removeItem(LLAVE_MARCA);
     } catch {
       // nada que hacer
     }

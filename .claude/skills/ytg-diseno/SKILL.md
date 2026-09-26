@@ -8,6 +8,25 @@ description: Sistema de diseño de yagotg.dev (YTG-01), la web personal de Yago 
 Una web personal editorial: **manda la tipografía y el objeto 3D acompaña**. Es
 una página con secciones, no una aplicación 3D con interfaz flotando encima.
 
+## La metáfora
+
+El currículum se lee **como un parte meteorológico**. Cada widget de una app
+del tiempo sostiene una parte del CV, y la traducción es fija:
+
+| Widget | Contenido |
+|---|---|
+| Ahora mismo | El tiempo real de la ciudad elegida y el puesto actual |
+| Próximas horas | Certificaciones pendientes |
+| Pronóstico | Experiencia: cada etapa es un día |
+| Viento | El stack, con velocidad en % |
+| Amanecer y atardecer | La carrera, de Zaragoza a Konstanz |
+| Avisos | Premios, en formato aviso meteorológico |
+| Estaciones | Proyectos propios |
+
+El selector de ciudad (Tudela · Zaragoza · Madrid) cambia el tiempo real y con
+él la escena. **El 3D obedece al tiempo, siempre**: si llueve en la ciudad
+elegida, llueve en la azotea. No inventes estados que no vengan de la lectura.
+
 ## La regla madre
 
 > **El contenido está en el HTML. El 3D lo ilustra, no lo contiene.**
@@ -42,8 +61,9 @@ El acento se reserva para una palabra del titular, los botones de acción, las
 marcas de las filas y el mensaje del visitante. Si aparece en todas partes deja
 de ser un acento.
 
-**El objeto 3D es monocromo**: vive entero en tonos del acento, con la crema
-como único contrapunto. Es lo que lo mantiene pegado a la página en vez de
+**El objeto 3D es monocromo**: la azotea de Yago, con un Yago diminuto que
+riega, trabaja o saca el paraguas según el tiempo. Vive entera en tonos del
+acento, con la crema como único contrapunto. Es lo que lo mantiene pegado a la página en vez de
 parecer una ilustración traída de otro sitio. Los tonos están en `TONOS`, en
 `src/escena.ts`.
 
@@ -99,3 +119,5 @@ signos de exclamación, nada de «apasionado por la tecnología».
 - Interfaz proyectada sobre la pantalla del aparato en 3D.
 - Terminal, intérprete de comandos y cualquier emulador de consola.
 - Low-poly con caras planas.
+- El jardín: la isla flotante, las plantas como proyectos y los estratos del
+  subsuelo. Sustituido por la azotea y el parte del tiempo.
