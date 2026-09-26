@@ -3,467 +3,276 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>YTG-01 · consola de cultivo</title>
-    <meta name="description" content="Un jardín donde las plantas son mi carrera. Yago Torres, yagotg.dev" />
-    <style>
-      :root {
-        --tipo: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-        --cifras: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
-
-        --tinta: #16323f;
-        --tinta-floja: #4d6b78;
-        --halo: #ffffffc4;
-
-        /* pantalla: azul profundo con brillo, no fósforo de terminal */
-        --vidrio: #081826;
-        --vidrio-alto: #10314a;
-        --texto: #eaf6ff;
-        --texto-flojo: #eaf6ff8c;
-        --cian: #4fd8ff;
-        --chicle: #ff5f9e;
-        --lima: #b6f03c;
-
-        --u: 6px;
-        color-scheme: light;
-      }
-
-      * { box-sizing: border-box; }
-
-      body {
-        margin: 0;
-        overflow: hidden;
-        background: #9fd8ee;
-        font-family: var(--tipo);
-        -webkit-font-smoothing: antialiased;
-        -webkit-tap-highlight-color: transparent;
-      }
-      #lienzo { display: block; width: 100vw; height: 100dvh; }
-
-      /* ─── rótulo y lecturas: flotando, pero con filo ─── */
-
-      .rotulo, .lecturas {
-        position: fixed;
-        top: max(18px, env(safe-area-inset-top));
-        color: var(--tinta);
-        pointer-events: none;
-        /* halo de 1px: recorta el texto contra el fondo sin emborronarlo */
-        text-shadow:
-          1px 0 0 var(--halo), -1px 0 0 var(--halo),
-          0 1px 0 var(--halo), 0 -1px 0 var(--halo),
-          1px 1px 0 var(--halo), -1px -1px 0 var(--halo),
-          1px -1px 0 var(--halo), -1px 1px 0 var(--halo);
-      }
-
-      .rotulo { left: 20px; }
-      .rotulo b {
-        display: block;
-        font-size: 17px;
-        font-weight: 800;
-        letter-spacing: -.02em;
-      }
-      .rotulo span {
-        font-size: 10px;
-        font-weight: 600;
-        letter-spacing: .12em;
-        text-transform: uppercase;
-        color: var(--tinta-floja);
-      }
-
-      .lecturas {
-        right: 20px;
-        display: flex;
-        gap: 20px;
-        text-align: right;
-      }
-      .lecturas div { display: grid; gap: 1px; }
-      .lecturas b {
-        font-family: var(--cifras);
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: -.02em;
-        font-variant-numeric: tabular-nums;
-      }
-      .lecturas span {
-        font-size: 9px;
-        font-weight: 600;
-        letter-spacing: .14em;
-        text-transform: uppercase;
-        color: var(--tinta-floja);
-      }
-
-      /* ─── etiqueta flotante ─── */
-
-      #pista {
-        position: fixed;
-        left: 50%;
-        bottom: 26px;
-        translate: -50% 0;
-        padding: 8px 16px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, #ffffff2e, #00000000) , #13293aeb;
-        color: #eaf6ff;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        opacity: 0;
-        transition: opacity .18s;
-        pointer-events: none;
-        box-shadow: inset 0 1px 0 #ffffff40, 0 6px 18px #0000002e;
-      }
-      #pista.visible { opacity: 1; }
-
-      /* ─── el visor ─── */
-
-      #visor {
-        position: fixed;
-        display: none;
-        overflow: hidden;
-        border-radius: 8px;
-        background:
-          radial-gradient(120% 80% at 50% 0%, var(--vidrio-alto), #0000 60%),
-          var(--vidrio);
-        color: var(--texto);
-        opacity: 0;
-        transition: opacity .25s;
-      }
-      #visor.montado { display: grid; }
-      #visor.visible { opacity: 1; }
-
-      /* en móvil deja de proyectarse y pasa a hoja inferior */
-      #visor.hoja {
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        width: auto;
-        height: min(56dvh, 480px);
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -10px 40px #00000040;
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-
-      #visor-interior {
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        height: 100%;
-        min-height: 0;
-        font-size: calc(var(--u) * 2.1);
-        line-height: 1.5;
-      }
-
-      .pz-cabecera {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: var(--u);
-        padding: calc(var(--u) * 1.7) calc(var(--u) * 2.2);
-        border-bottom: 1px solid #ffffff1a;
-      }
-      .pz-titulo {
-        font-size: calc(var(--u) * 2.3);
-        font-weight: 700;
-        letter-spacing: .1em;
-        text-transform: uppercase;
-      }
-      .pz-reloj {
-        font-family: var(--cifras);
-        font-size: calc(var(--u) * 2);
-        color: var(--texto-flojo);
-        font-variant-numeric: tabular-nums;
-      }
-
-      .pz-cuerpo {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6);
-        display: grid;
-        gap: calc(var(--u) * 0.5);
-        align-content: start;
-      }
-      .pz-cuerpo::-webkit-scrollbar { width: calc(var(--u) * 0.9); }
-      .pz-cuerpo::-webkit-scrollbar-thumb { background: #ffffff2e; border-radius: 99px; }
-
-      .pz-grupo {
-        font-size: calc(var(--u) * 1.5);
-        font-weight: 700;
-        letter-spacing: .18em;
-        text-transform: uppercase;
-        color: var(--cian);
-        padding: calc(var(--u) * 1.3) calc(var(--u) * 0.6) calc(var(--u) * 0.2);
-      }
-
-      .pz-fila, .pz-destacado {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: var(--u);
-        width: 100%;
-        border: 0;
-        cursor: pointer;
-        text-align: left;
-        color: inherit;
-        font: inherit;
-        padding: calc(var(--u) * 1.25) calc(var(--u) * 1.5);
-        border-radius: calc(var(--u) * 1.1);
-        background: linear-gradient(180deg, #ffffff1c, #ffffff08);
-        box-shadow: inset 0 1px 0 #ffffff2e;
-        transition: background .12s, transform .08s;
-      }
-      .pz-fila:hover, .pz-fila:focus-visible,
-      .pz-destacado:hover, .pz-destacado:focus-visible {
-        background: linear-gradient(180deg, #ffffff33, #ffffff12);
-        outline: none;
-      }
-      .pz-fila:active, .pz-destacado:active { transform: translateY(1px); }
-      .pz-fila:disabled { cursor: default; background: #ffffff0a; box-shadow: none; }
-      .pz-fila-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .pz-fila-apunte {
-        color: var(--texto-flojo);
-        font-size: calc(var(--u) * 1.7);
-        white-space: nowrap;
-      }
-
-      /* el botón que invita a dejar marca: el único con color de verdad */
-      .pz-destacado {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: calc(var(--u) * 0.3);
-        margin-bottom: calc(var(--u) * 0.6);
-        background: linear-gradient(170deg, #ff8ec0, #ff3f8e 55%, #d81d6e);
-        box-shadow: inset 0 1px 0 #ffffff77, 0 calc(var(--u) * 0.5) calc(var(--u) * 1.4) #ff3f8e3d;
-      }
-      .pz-destacado-titulo { font-weight: 800; font-size: calc(var(--u) * 2.3); }
-      .pz-destacado-apunte { font-size: calc(var(--u) * 1.6); color: #ffffffc7; }
-
-      .pz-apunte, .pz-resumen { margin: 0 0 calc(var(--u) * 0.6); padding-inline: calc(var(--u) * 0.6); }
-      .pz-apunte { color: var(--texto-flojo); font-size: calc(var(--u) * 1.8); }
-      .pz-notas { margin: 0; padding-left: calc(var(--u) * 3); display: grid; gap: calc(var(--u) * 0.7); }
-      .pz-enlace { color: var(--cian); padding-inline: calc(var(--u) * 0.6); }
-
-      .pz-riego { display: grid; gap: calc(var(--u) * 0.6); margin-top: calc(var(--u) * 1.4); }
-      .pz-regar {
-        justify-self: start;
-        border: 0;
-        cursor: pointer;
-        background: linear-gradient(180deg, #7ce8ff, #16a8d8 60%, #0b7fa8);
-        color: #04222e;
-        font-family: var(--tipo);
-        font-weight: 800;
-        font-size: calc(var(--u) * 1.8);
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        padding: calc(var(--u) * 1.1) calc(var(--u) * 2.4);
-        border-radius: 999px;
-        box-shadow: inset 0 1px 0 #ffffffa8, 0 calc(var(--u) * 0.4) calc(var(--u) * 1) #0b7fa840;
-      }
-      .pz-regar:disabled {
-        background: #ffffff1c;
-        color: var(--texto-flojo);
-        box-shadow: none;
-        cursor: default;
-      }
-      .pz-aviso { margin: 0; padding-inline: calc(var(--u) * 0.6); color: var(--texto-flojo); }
-
-      .pz-cert, .pz-estrato {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--u);
-        padding: calc(var(--u) * 1.05) calc(var(--u) * 1.5);
-      }
-      .pz-cert--pendiente { opacity: .55; }
-      .pz-barra {
-        flex: 0 0 30%;
-        height: calc(var(--u) * 1);
-        border-radius: 99px;
-        background: #ffffff1c;
-        overflow: hidden;
-      }
-      .pz-barra i {
-        display: block;
-        height: 100%;
-        border-radius: 99px;
-        background: linear-gradient(90deg, var(--cian), var(--lima));
-      }
-
-      /* ─── deja tu marca ─── */
-
-      .pz-campo {
-        width: 100%;
-        border: 0;
-        border-radius: calc(var(--u) * 1.1);
-        padding: calc(var(--u) * 1.4) calc(var(--u) * 1.6);
-        background: #00000047;
-        box-shadow: inset 0 1px 0 #ffffff1f, inset 0 0 0 1px #ffffff1a;
-        color: var(--texto);
-        font-family: var(--tipo);
-        font-weight: 700;
-        font-size: calc(var(--u) * 2.4);
-      }
-      .pz-campo:focus { outline: 2px solid var(--cian); outline-offset: 1px; }
-      .pz-campo::placeholder { color: #eaf6ff4d; font-weight: 400; }
-      .pz-cuenta {
-        justify-self: end;
-        font-family: var(--cifras);
-        font-size: calc(var(--u) * 1.5);
-        color: var(--texto-flojo);
-      }
-
-      .pz-paleta { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1); padding-inline: calc(var(--u) * 0.6); }
-      .pz-color {
-        width: calc(var(--u) * 4.6);
-        height: calc(var(--u) * 4.6);
-        border: 0;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: inset 0 1px 0 #ffffffb0, 0 0 0 2px #ffffff1a;
-      }
-      .pz-color.elegido { box-shadow: inset 0 1px 0 #ffffffb0, 0 0 0 3px var(--texto); }
-
-      .pz-borrar {
-        justify-self: start;
-        margin-top: calc(var(--u) * 1.2);
-        border: 0;
-        cursor: pointer;
-        background: #ffffff1c;
-        color: var(--texto-flojo);
-        font-family: var(--tipo);
-        font-size: calc(var(--u) * 1.7);
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        padding: calc(var(--u) * 0.9) calc(var(--u) * 1.8);
-        border-radius: 999px;
-      }
-
-      .pz-pie {
-        display: flex;
-        align-items: center;
-        gap: var(--u);
-        padding: calc(var(--u) * 1.2) calc(var(--u) * 2.2);
-        border-top: 1px solid #ffffff1a;
-      }
-      .pz-atras {
-        border: 0;
-        cursor: pointer;
-        background: #ffffff1c;
-        color: var(--texto);
-        font-family: var(--tipo);
-        font-weight: 700;
-        font-size: calc(var(--u) * 1.7);
-        letter-spacing: .1em;
-        text-transform: uppercase;
-        padding: calc(var(--u) * 0.95) calc(var(--u) * 2);
-        border-radius: 999px;
-        box-shadow: inset 0 1px 0 #ffffff2e;
-      }
-      .pz-atras[hidden] { visibility: hidden; display: block; }
-
-      /* ─── botones de página ─── */
-
-      .pastilla {
-        position: fixed;
-        bottom: max(20px, env(safe-area-inset-bottom));
-        border: 0;
-        cursor: pointer;
-        padding: 12px 22px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, #ffffff, #dfe9f2 55%, #bccddb);
-        color: var(--tinta);
-        font-family: var(--tipo);
-        font-weight: 700;
-        font-size: 11px;
-        letter-spacing: .1em;
-        text-transform: uppercase;
-        box-shadow: inset 0 1px 0 #ffffff, 0 3px 0 #9fb3c4, 0 10px 22px #0000002e;
-      }
-      .pastilla:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #ffffff, 0 1px 0 #9fb3c4; }
-
-      #salir { left: 20px; display: none; z-index: 3; }
-      #salir.visible { display: block; }
-      #abrir-ajustes { right: 20px; }
-
-      #ajustes {
-        position: fixed;
-        right: 20px;
-        bottom: 72px;
-        display: none;
-        gap: 10px;
-        padding: 16px;
-        border-radius: 14px;
-        background: #ffffffee;
-        backdrop-filter: blur(8px);
-        box-shadow: inset 0 1px 0 #ffffff, 0 10px 30px #00000033;
-        font-size: 10px;
-        font-weight: 600;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        color: var(--tinta);
-        max-height: 60dvh;
-        overflow-y: auto;
-      }
-      #ajustes.abierto { display: grid; }
-      #mandos { display: grid; gap: 9px; }
-      #mandos label {
-        display: grid;
-        grid-template-columns: 116px 120px 30px;
-        align-items: center;
-        gap: 10px;
-      }
-      #mandos output { text-align: right; font-family: var(--cifras); font-variant-numeric: tabular-nums; }
-      #mandos input { width: 100%; }
-
-      /* ─── móvil ─── */
-
-      @media (max-width: 820px), (pointer: coarse) {
-        .rotulo b { font-size: 15px; }
-        /* las lecturas bajan a su propia linea: arriba no caben las dos cosas */
-        .lecturas {
-          left: 20px;
-          right: auto;
-          top: calc(max(18px, env(safe-area-inset-top)) + 42px);
-          text-align: left;
-          gap: 14px;
-        }
-        .lecturas b { font-size: 14px; }
-        .lecturas span { font-size: 8px; letter-spacing: .1em; }
-        #pista { display: none; }
-        #ajustes { left: 16px; right: 16px; bottom: 76px; }
-        #mandos label { grid-template-columns: 1fr 1fr 28px; }
-        .pastilla { padding: 12px 18px; }
-        #salir { bottom: calc(min(56dvh, 480px) + 14px); }
-        /* con la hoja abierta, ajustes estorba */
-        #visor.hoja.montado ~ #abrir-ajustes { display: none; }
-      }
-
-      @media (max-width: 420px) {
-        .lecturas div:nth-child(4) { display: none; }
-      }
-    </style>
+    <title>Yago Torres · ingeniero de software</title>
+    <meta
+      name="description"
+      content="Yago Torres, ingeniero de software en Zaragoza. IA generativa, agentes, devops e infraestructura." />
+    <meta name="theme-color" content="#ece9e2" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/src/estilo.css" />
   </head>
+
   <body>
-    <canvas id="lienzo"></canvas>
+    <header class="barra">
+      <div class="carril barra__fila">
+        <a class="marca" href="#">YTG<i>-01</i></a>
+        <nav class="menu">
+          <a href="#experiencia">Experiencia</a>
+          <a href="#proyectos">Proyectos</a>
+          <a href="#stack">Stack</a>
+          <a href="#formacion">Formación</a>
+        </nav>
+        <a class="boton" href="#contacto">Contacto</a>
+      </div>
+    </header>
 
-    <div class="rotulo">
-      <b>YTG-01</b>
-      <span>consola de cultivo · zaragoza</span>
-    </div>
+    <main>
+      <!-- ─── portada ─────────────────────────────────────── -->
+      <section class="portada">
+        <div class="carril portada__fila">
+          <div class="portada__texto">
+            <p class="rotulillo">Yago Torres · Zaragoza</p>
+            <h1 class="display">Un jardín<br />que es un<br /><em>currículum</em></h1>
+            <p class="portada__entrada">
+              Ingeniero de software. Trabajo en IA generativa, agentes y automatización, y
+              vengo de la infraestructura y los sistemas. Cada planta de esta isla es una
+              etapa o un proyecto: cuanto más viva, más copa.
+            </p>
+            <div class="portada__acciones">
+              <a class="boton boton--acento" href="#experiencia">Ver el jardín</a>
+              <a class="boton boton--hueco" href="#marca">Deja tu marca</a>
+            </div>
+          </div>
 
-    <div class="lecturas">
-      <div><b id="lectura-hora">--:--</b><span>hora</span></div>
-      <div><b id="lectura-temperatura">--°</b><span>exterior</span></div>
-      <div><b id="lectura-meteo">—</b><span>cielo</span></div>
-      <div><b id="lectura-estacion">—</b><span>estación</span></div>
-    </div>
+          <div class="escena">
+            <canvas id="lienzo" aria-hidden="true"></canvas>
+          </div>
+        </div>
 
-    <div id="pista"></div>
+        <div class="lecturas" aria-label="ahora mismo en Zaragoza">
+          <div><b id="lectura-hora">--:--</b><span class="rotulillo">Hora en Zaragoza</span></div>
+          <div><b id="lectura-temperatura">--°</b><span class="rotulillo">Exterior</span></div>
+          <div><b id="lectura-meteo">—</b><span class="rotulillo">Cielo</span></div>
+          <div><b id="lectura-estacion">—</b><span class="rotulillo">Estación</span></div>
+        </div>
+      </section>
 
-    <div id="visor"><div id="visor-interior"></div></div>
+      <!-- ─── experiencia ─────────────────────────────────── -->
+      <section class="seccion" id="experiencia">
+        <div class="carril">
+          <div class="seccion__cabeza">
+            <h2 class="display">Dónde he<br />trabajado</h2>
+            <p class="rotulillo">Los árboles</p>
+          </div>
 
-    <button id="salir" class="pastilla" type="button">salir</button>
-    <button id="abrir-ajustes" class="pastilla" type="button">ajustes</button>
-    <div id="ajustes"><div id="mandos"></div></div>
+          <article class="entrada" data-planta="capgemini" data-vigor="0.62">
+            <p class="entrada__cuando">sep 2026 — hoy</p>
+            <div class="entrada__que">
+              <h3>Capgemini <span>· Equipo GenAI</span></h3>
+              <ul>
+                <li>Desarrollo de agentes y automatización sobre IA generativa.</li>
+                <li>Prácticas de devops en el ciclo de vida de producto.</li>
+              </ul>
+            </div>
+            <p class="entrada__marca">En curso</p>
+          </article>
 
-    <script type="module" src="/src/prototipo/main.ts"></script>
+          <article class="entrada" data-planta="inetum" data-vigor="0.38">
+            <p class="entrada__cuando">jun — ago 2024</p>
+            <div class="entrada__que">
+              <h3>INETUM <span>· Análisis documental con IA</span></h3>
+              <ul>
+                <li>
+                  Llevé una infraestructura de análisis documental de la nube a on-premise,
+                  replicando el comportamiento de los servicios gestionados.
+                </li>
+                <li>Primer contacto real con metodologías ágiles y pipelines de CI/CD.</li>
+                <li>Aprendí que la parte difícil de la IA en producción no es el modelo.</li>
+              </ul>
+            </div>
+            <p class="entrada__marca">Beca</p>
+          </article>
+
+          <article class="entrada" data-planta="urtats" data-vigor="0.34">
+            <p class="entrada__cuando">may — ago 2023</p>
+            <div class="entrada__que">
+              <h3>Urtats <span>· Socorrista</span></h3>
+              <ul>
+                <li>Seguridad acuática, respuesta ante emergencias, RCP y desfibrilador.</li>
+                <li>Trabajo en equipo con responsabilidad real sobre personas.</li>
+              </ul>
+            </div>
+            <p class="entrada__marca">Verano</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ─── proyectos ───────────────────────────────────── -->
+      <section class="seccion" id="proyectos">
+        <div class="carril">
+          <div class="seccion__cabeza">
+            <h2 class="display">Por mi<br />cuenta</h2>
+            <p class="rotulillo">Los arbustos</p>
+          </div>
+
+          <div class="rejilla">
+            <a
+              class="ficha"
+              data-planta="yagotg-dev"
+              data-vigor="0.7"
+              href="https://github.com/Yago-Torres/Yago_personal_page"
+              target="_blank"
+              rel="noopener noreferrer">
+              <h3>yagotg.dev</h3>
+              <p>Este jardín. Una isla en 3D donde las plantas son mi carrera.</p>
+              <span class="ficha__ir">Ver repo →</span>
+            </a>
+            <a
+              class="ficha"
+              data-planta="rustytype"
+              data-vigor="0.55"
+              href="https://github.com/Yago-Torres/rustytype"
+              target="_blank"
+              rel="noopener noreferrer">
+              <h3>rustytype</h3>
+              <p>Aplicación de terminal para practicar mecanografía, inspirada en Monkeytype.</p>
+              <span class="ficha__ir">Ver repo →</span>
+            </a>
+            <a
+              class="ficha"
+              data-planta="bloste"
+              data-vigor="0.45"
+              href="https://github.com/Yago-Torres/Bloste"
+              target="_blank"
+              rel="noopener noreferrer">
+              <h3>Bloste</h3>
+              <p>Implementación de la librería Bloste.</p>
+              <span class="ficha__ir">Ver repo →</span>
+            </a>
+            <a
+              class="ficha"
+              data-planta="nebulin"
+              data-vigor="0.4"
+              href="https://github.com/Yago-Torres/nebulin"
+              target="_blank"
+              rel="noopener noreferrer">
+              <h3>nebulin</h3>
+              <p>Pendiente de describir.</p>
+              <span class="ficha__ir">Ver repo →</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── stack ───────────────────────────────────────── -->
+      <section class="seccion" id="stack">
+        <div class="carril">
+          <div class="seccion__cabeza">
+            <h2 class="display">Bajo<br />tierra</h2>
+            <p class="rotulillo">El sustrato</p>
+          </div>
+
+          <div id="estratos">
+            <div class="estrato" data-peso="3"><span>Linux y administración de sistemas</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="3"><span>Docker · Kubernetes · Terraform · OpenStack · FreeIPA</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="3"><span>IA generativa · agentes · Python</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="2"><span>Go</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="2"><span>C · C++ · Java · Ensamblador</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="2"><span>JavaScript · TypeScript · React · Next</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="1"><span>SQL</span><span class="barra-nivel"><i></i></span></div>
+            <div class="estrato" data-peso="1"><span>Haskell</span><span class="barra-nivel"><i></i></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── formación, premios, certificaciones ─────────── -->
+      <section class="seccion" id="formacion">
+        <div class="carril">
+          <div class="seccion__cabeza">
+            <h2 class="display">Raíces</h2>
+            <p class="rotulillo">Formación y premios</p>
+          </div>
+
+          <div class="dos">
+            <div>
+              <p class="rotulillo" style="margin-bottom: 14px">Formación</p>
+              <div class="lista">
+                <div><span>Ingeniería Informática · Universidad de Zaragoza</span><small>2022 — 2025</small></div>
+                <div><span>Ingeniería Informática · Universität Konstanz</span><small>2025 — 2026</small></div>
+                <div><span>Inglés C1 · Alemán B1 · EOI</span><small>—</small></div>
+                <div><span>Estudios profesionales de música · Conservatorio de Tudela</span><small>2012</small></div>
+              </div>
+            </div>
+
+            <div>
+              <p class="rotulillo" style="margin-bottom: 14px">Premios</p>
+              <div class="lista">
+                <div><span>Olimpiada de programación de Navarra · ganador</span><small>2022</small></div>
+                <div><span>NASA Space Apps Challenge · Etopía</span><small>2024</small></div>
+                <div><span>Premio de música Fernando Remacha</span><small>2012</small></div>
+                <div><span>Bachillerato British Council</span><small>2022</small></div>
+              </div>
+            </div>
+          </div>
+
+          <p class="rotulillo" style="margin: 36px 0 14px">Certificaciones en curso</p>
+          <div class="pastillas">
+            <span class="pastilla pastilla--pendiente"><b>AZ-900</b> Azure Fundamentals</span>
+            <span class="pastilla pastilla--pendiente"><b>AI-900</b> Azure AI Fundamentals</span>
+            <span class="pastilla pastilla--pendiente"><b>AZ-104</b> Azure Administrator</span>
+            <span class="pastilla pastilla--pendiente"><b>GH-200</b> GitHub Actions</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── deja tu marca ───────────────────────────────── -->
+      <section class="seccion" id="marca">
+        <div class="carril">
+          <div class="seccion__cabeza">
+            <h2 class="display">Deja tu<br />marca</h2>
+            <p class="rotulillo">Queda escrita aquí y brota una flor en la isla</p>
+          </div>
+
+          <form class="marca-forma" id="forma-marca" autocomplete="off">
+            <label class="rotulillo" for="campo-marca">Tu mensaje</label>
+            <input
+              class="campo"
+              id="campo-marca"
+              name="mensaje"
+              type="text"
+              maxlength="42"
+              placeholder="escribe algo" />
+            <div class="marca-pie">
+              <span class="cuenta" id="cuenta-marca">0/42</span>
+              <button class="boton boton--hueco" id="borrar-marca" type="button">Quitarla</button>
+            </div>
+            <p class="aviso">
+              De momento tu mensaje se guarda solo en este navegador. Cuando el jardín pase a
+              ser compartido, los mensajes se moderarán antes de publicarse.
+            </p>
+          </form>
+
+          <p class="display marca-eco" id="marca-eco" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ─── pie ───────────────────────────────────────────── -->
+    <footer class="seccion pie" id="contacto" style="border-bottom: 0">
+      <div class="carril">
+        <h2 class="display pie__grande">Hablamos</h2>
+        <div class="pie__fila" style="margin-top: 28px">
+          <p>
+            <a href="mailto:torresgarciayago@gmail.com">torresgarciayago@gmail.com</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/Yago-Torres" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </p>
+          <p class="rotulillo">YTG-01 · Zaragoza · <span id="anio">2026</span></p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

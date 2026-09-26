@@ -4,7 +4,7 @@
 // tranquilo. Un aparato que se queda colgado porque no hay red es un aparato
 // roto, y esto tiene que aguantar sin internet.
 
-import { ZARAGOZA } from "../tiempo";
+import { ZARAGOZA } from "./tiempo.ts";
 
 export type Cielo = "despejado" | "nubes" | "niebla" | "lluvia" | "nieve" | "tormenta";
 

@@ -1,129 +1,101 @@
 ---
 name: ytg-diseno
-description: Sistema de diseño del aparato YTG-01 (yagotg.dev). Cargar SIEMPRE antes de escribir o modificar CSS, HTML, markup de componentes, dibujo en canvas, copy de la interfaz o textos de la consola de este proyecto. Define la regla chasis/pantalla, los tokens, la retícula, la tipografía, el tramado y el tono de voz.
+description: Sistema de diseño de yagotg.dev (YTG-01), la web personal de Yago Torres. Cargar SIEMPRE antes de escribir o modificar HTML, CSS, copy de la interfaz o la escena 3D de este proyecto. Define la jerarquía tipográfica, el acento único, la retícula, la regla de contenido y el papel del objeto 3D.
 ---
 
 # Sistema de diseño YTG-01
 
-El sitio no es una página: **es un aparato**. Una consola de cultivo que vigila
-un jardín compartido donde las plantas son la carrera de Yago. Todo lo que
-escribas tiene que sostener esa ficción.
-
-**Regla de contenido, dura:** los árboles son etapas profesionales y **nunca**
-llevan nombres de cliente ni de proyecto interno. Llevan notas de qué se hizo,
-qué se usó y qué se aprendió. Solo los arbustos —proyectos personales y
-públicos— tienen nombre propio y enlace. Si dudas de si algo es publicable,
-no lo publiques y pregunta.
+Una web personal editorial: **manda la tipografía y el objeto 3D acompaña**. Es
+una página con secciones, no una aplicación 3D con interfaz flotando encima.
 
 ## La regla madre
 
-> **El aparato tiene materia. La pantalla es de 1 bit.**
+> **El contenido está en el HTML. El 3D lo ilustra, no lo contiene.**
 
-El sitio es un **diorama isométrico en 3D**: una isla flotante cuyo corte de
-subsuelo es el CV, con el aparato encima y las plantas creciendo alrededor.
-Toda la escena pasa por un post-proceso de tramado ordenado con cuantización a
-paleta corta —no a 1 bit, que se cargaría el material—, de modo que el plástico
-translúcido, el reflejo y la sombra sobreviven a la trama.
+Todo el currículum —etapas, proyectos, stack, formación, premios,
+certificaciones— vive como HTML semántico en `index.html`. La escena 3D lee del
+documento (`[data-planta]`, `[data-vigor]`, `[data-peso]`), nunca al revés.
+Consecuencia directa: la página se lee sin JavaScript, con teclado y con lector
+de pantalla. **Eso no se recorta nunca.**
 
-La pantalla del aparato sí es **1 bit estricto**, porque se dibuja en su propia
-textura antes del post-proceso. Nunca metas color de acento dentro de la
-pantalla. Si esas dos capas se mezclan, el concepto se cae.
+Si necesitas un dato nuevo en la escena, añádelo como atributo `data-` en el
+HTML donde ya está ese contenido. No crees un fichero de datos paralelo: se
+desincroniza y duplica la verdad.
 
-## Las tres capas
+## Jerarquía
 
-| Capa | Qué es | Dónde vive |
-|---|---|---|
-| 1. Marco | Hardware: chasis, canto, serigrafía, botones, LED, rejilla | DOM + CSS |
-| 2. Interfaz | Blueprint: retícula, líneas de 1px, cotas, etiquetas, marcas de esquina | DOM + CSS |
-| 3. Lo vivo | Tramado 1-bit: plantas, sustrato, lo que crece | Canvas |
+1. **Titulares**: Anton, mayúsculas, interlineado 0.86, tamaños grandes de
+   verdad (`clamp` hasta 100px o más). Es el elemento principal de cada sección.
+2. **Texto**: Archivo. Párrafos cortos, ancho máximo ~44ch.
+3. **Etiquetas y cifras**: monoespaciada, 11px, `letter-spacing: .18em`,
+   mayúsculas, en `--tinta-media`. Son el detalle técnico que da carácter.
 
-**El texto y la retícula nunca se dibujan dentro del canvas.** Van en DOM para
-que sean nítidos, seleccionables y accesibles. El canvas es solo para lo vivo.
+## Color
 
-## Tokens
+**Un solo acento y neutros alrededor.** Nada de paletas de caramelo, nada de
+arcoíris, nada de degradados de color.
 
-Están todos en `src/style.css` bajo `:root`. **Nunca escribas un color literal
-en una regla**: si falta un token, añádelo ahí.
+- Neutros: `--papel`, `--papel-alto`, `--linea`, `--tinta`, `--tinta-media`
+- Acento: `--acento` y `--acento-baja`, y nada más
 
-- Chasis: `--chasis`, `--chasis-alto`, `--chasis-bajo`, `--surco`
-  (plástico translúcido mate, hueso apagado. **El amarillo y el verde chillón
-  se descartaron**: no los reintroduzcas.)
-- Serigrafía: `--tinta`, `--tinta-tenue`
-- Acentos, exactamente tres: `--azul` (botón maestro), `--rojo` (marca y ayuda), `--verde` (señal de vida)
-- Pantalla: `--pantalla`, `--fosforo`, `--reticula`
-- Medidas: `--paso` (8px), `--radio`, `--canto`
+El acento se reserva para una palabra del titular, los botones de acción, las
+marcas de las filas y el mensaje del visitante. Si aparece en todas partes deja
+de ser un acento.
 
-Hay tres variantes de chasis vía `:root[data-chasis="verde"|"gris"]`. Cualquier
-token de color nuevo tiene que funcionar en las tres.
+**El objeto 3D es monocromo**: vive entero en tonos del acento, con la crema
+como único contrapunto. Es lo que lo mantiene pegado a la página en vez de
+parecer una ilustración traída de otro sitio. Los tonos están en `TONOS`, en
+`src/escena.ts`.
 
-## Retícula
+**De noche en Zaragoza la página se da la vuelta** con
+`:root[data-turno="noche"]`: el papel se vuelve tinta y la tinta papel. El
+acento se mantiene, solo se apaga un punto. Cualquier color nuevo tiene que
+funcionar en los dos turnos, así que siempre va como token.
 
-Todo espaciado, padding y gap es múltiplo de `--paso` (8px), expresado como
-`calc(var(--paso) * n)`. Sin números sueltos. Las excepciones son los detalles
-de 1–5px del relieve físico (bordes, cantos, sombras duras).
+## Retícula y estructura
 
-## Tipografía
+- El ancho lo marca `.carril`; el aire lateral es `--gutter`.
+- Las secciones se separan con **reglas de 1px en `--linea`**, no con sombras
+  ni tarjetas flotantes. El sitio es plano: sin biseles, sin brillos, sin
+  sombras de caja.
+- Las listas de contenido son filas con regla arriba, como un índice.
+- Marcas de esquina finas solo alrededor de la escena, y con moderación.
 
-- **Chasis** (`--tipo-chasis`): sans del sistema. Las etiquetas usan la clase
-  `.serigrafia`: 9px, peso 700, `letter-spacing: .14em`, minúsculas en el HTML
-  y mayúsculas por CSS.
-- **Pantalla y cifras** (`--tipo-pantalla`): monoespaciada. Todos los números
-  llevan `font-variant-numeric: tabular-nums` para que no bailen al actualizarse.
-- Sin fuentes web. Si alguna vez hace falta una, se pregunta antes.
+## El objeto 3D
 
-## El objeto
+- Fondo transparente: el lienzo deja ver el papel de la página.
+- Movimiento lento y corto: giro de pocos grados por segundo más un paralaje
+  leve con el puntero. Se para al salir de pantalla y con
+  `prefers-reduced-motion`.
+- Solo `three` como dependencia. Nada de post-proceso, motores de física ni
+  librerías de interfaz. Si crees que hace falta una, pregunta.
+- Toda constante que afecte a lo que se ve va en `CALIBRACION`, en mayúsculas,
+  arriba del módulo, con un comentario de una línea diciendo qué pasa si sube.
 
-El aparato tiene volumen y hay que mantenerlo:
+## Regla de contenido, dura
 
-- El volumen es **real**: Three.js, materiales físicos, luz de estudio y sombra
-  de contacto. El aparato es plástico translúcido mate
-  (`MeshPhysicalMaterial` con `transmission`), nunca plano ni de color chillón.
-- El movimiento de cámara es lento y corto: giro automático de pocos grados por
-  segundo más un paralaje leve con el puntero. Nada de órbita libre brusca.
-- Se desactiva con `prefers-reduced-motion` y se aligera en táctil.
-- **Cero dependencias más allá de `three`.** Nada de motores de física, GUI de
-  depuración ni librerías de post-proceso: los pases se escriben a mano.
+Las etapas profesionales **nunca** llevan nombres de cliente ni de proyecto
+interno: ese trabajo es confidencial. Llevan notas de qué se hizo, qué se usó y
+qué se aprendió. Solo los proyectos propios y públicos tienen nombre y enlace.
+Si dudas de si algo es publicable, no lo publiques y pregunta.
 
-## Tramado
-
-- **Escena 3D**: Bayer ordenado 8×8 como paso de post-proceso, cuantizando a
-  pocos niveles por canal (ver `src/prototipo/tramado.ts`). Nada de difusión de
-  error: Floyd-Steinberg parpadea al animar.
-- **Pantalla del aparato**: Bayer 4×4 a dos valores exactos, `--pantalla` y
-  `--fosforo`, dibujada en un buffer pequeño y escalada con
-  `imageSmoothingEnabled = false`. El píxel gordo es parte del estilo.
-- El grano de trama se mide en píxeles de pantalla, no en píxeles del mundo:
-  la trama se queda pegada al cristal, no a los objetos.
-
-## Calibración
-
-Nada de números mágicos enterrados. Toda constante que afecte a cómo se ve o
-se mueve algo vivo —crecimiento, ángulos, umbrales, inclinación, mezcla de
-audio— se declara arriba del módulo, en mayúsculas, con un comentario de una
-línea diciendo qué pasa si la subes. Un aparato se ajusta.
+El mensaje que deja el visitante es texto libre. Hoy vive en su navegador, así
+que no hay riesgo. **En cuanto pase a ser compartido necesita moderación antes
+de publicarse**, porque sale en grande con el nombre de Yago debajo.
 
 ## Voz
 
-La consola habla en **castellano, en minúsculas, en corto y desde dentro de la
-ficción**. Es un aparato de jardinería, no un terminal Unix.
+Castellano, primera persona, frases cortas y sin humo. Nada de emoji, nada de
+signos de exclamación, nada de «apasionado por la tecnología».
 
-- Bien: `el helecho se yergue. 3 personas lo han regado hoy.`
-- Bien: `sustrato seco. esta planta lleva 40 días sin tocarse.`
-- Mal: `Error: comando no encontrado.`
-- Mal: cualquier emoji, cualquier signo de exclamación.
+- Bien: `Llevé una infraestructura de análisis documental de la nube a on-premise.`
+- Mal: `Experto en soluciones cloud de vanguardia.`
 
-**`whoami`, `ls`, `cd`, `sudo` y demás no existen.** Si alguien los escribe, el
-aparato responde en ficción sin ejecutar nada:
-`esto no es una terminal. es una consola de riego.`
+## Lo descartado, para que nadie lo reintroduzca
 
-Los comandos son verbos de jardinería en castellano: `mirar`, `regar`, `abrir`,
-`plantar`, `podar`, `excavar`, `etiquetas`, `historia`, `ayuda`.
-
-## Accesibilidad, no negociable
-
-- Cada planta tiene una URL real con HTML pre-generado, navegable sin JS.
-- El canvas siempre lleva `aria-hidden="true"`: lo que cuenta va en DOM.
-- Todo control es un `<button>` o un `<a>` de verdad, con `:focus-visible`
-  visible y etiqueta accesible.
-- Nada depende solo del color: el estado se dice también con texto o forma.
-- Respeta `prefers-reduced-motion` en cualquier cosa que se mueva.
+- Chasis amarillo y estética Teenage Engineering.
+- Estética Y2K: cromados, irisado, plásticos de caramelo, arcoíris.
+- Tramado y post-proceso de dither.
+- Interfaz proyectada sobre la pantalla del aparato en 3D.
+- Terminal, intérprete de comandos y cualquier emulador de consola.
+- Low-poly con caras planas.

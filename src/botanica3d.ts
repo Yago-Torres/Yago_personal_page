@@ -6,7 +6,7 @@
 // siempre el mismo árbol, y dos etapas distintas dan árboles distintos.
 
 import { Vector3 } from "three";
-import { expandir, genoma, type Genoma } from "../botanica";
+import { expandir, genoma, type Genoma } from "./botanica.ts";
 
 export const CALIBRACION = {
   // Vueltas de rosca que se aplican al ramificar. El número áureo reparte las
