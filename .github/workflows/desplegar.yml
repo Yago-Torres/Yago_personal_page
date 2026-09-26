@@ -1,0 +1,42 @@
+name: Desplegar
+
+# Cada push a main despliega. Si las comprobaciones o el build fallan,
+# no se despliega nada: el sitio vivo se queda como estaba.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Un despliegue a la vez. Si llegan dos pushes seguidos, gana el último y el
+# anterior se cancela en vez de pisarse mutuamente.
+concurrency:
+  group: desplegar
+  cancel-in-progress: true
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Comprobaciones
+        run: npm run check
+
+      - name: Construir
+        run: npm run build
+
+      - name: Desplegar a Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
