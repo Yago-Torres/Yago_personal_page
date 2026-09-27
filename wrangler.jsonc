@@ -1,18 +1,33 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ytg-01",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-09-26",
   "assets": { "directory": "./dist" },
-  // El dominio propio está desactivado a propósito: así el primer despliegue
-  // sale a ytg-01.<subdominio>.workers.dev y no toca la página que hay viva
-  // ahora mismo en yagotg.dev.
+  "observability": { "enabled": true },
+
+  // A dónde llega el formulario y desde dónde sale.
+  "vars": {
+    "DESTINO": "torresgarciayago@gmail.com",
+    "REMITE": "contacto@yagotg.dev"
+  }
+
+  // ─── para que el formulario envíe de verdad ───────────────────────────
+  // Email Sending va en el plan de pago de Workers. Cuando lo tengas:
+  //   1. npx wrangler email sending enable yagotg.dev
+  //   2. descomenta esto y vuelve a desplegar
+  // Hasta entonces el endpoint responde 503 y la página abre el cliente de
+  // correo del visitante con el mensaje ya escrito, así que el formulario
+  // funciona igual.
   //
-  // Para quedarte el dominio: quita primero los dominios personalizados del
-  // proyecto de Pages en el panel de Cloudflare y descomenta esto.
+  // "send_email": [{ "name": "EMAIL" }]
+
+  // ─── el dominio propio ────────────────────────────────────────────────
+  // Quita primero los dominios personalizados del proyecto de Pages y
+  // descomenta esto.
   //
   // "routes": [
   //   { "pattern": "yagotg.dev", "custom_domain": true },
   //   { "pattern": "www.yagotg.dev", "custom_domain": true }
   // ]
-  "observability": { "enabled": true }
 }

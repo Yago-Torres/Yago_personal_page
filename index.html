@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Yago Torres · parte meteorológico</title>
+    <title>Yago Torres — ingeniero de software</title>
     <meta
       name="description"
-      content="El currículum de Yago Torres leído como un parte del tiempo. Ingeniero de software en IA generativa, agentes y devops." />
+      content="Yago Torres, ingeniero de software en Zaragoza. IA generativa, agentes, automatización y devops." />
     <meta name="theme-color" content="#2f7cc9" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,6 +17,40 @@
     <!-- iconos, definidos una vez -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
       <defs>
+        <!-- del tiempo -->
+        <g id="w-sol" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.3" />
+          <path d="M12 2.6v2.4M12 19v2.4M2.6 12H5M19 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7" />
+        </g>
+        <g id="w-sol-nube" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8.4 6.6A3.4 3.4 0 1 1 12 10.2M12 2.8v1.6M4.6 8.4H3M6.2 3.6 5 2.6M18.4 3.6l1.2-1" />
+          <path d="M7.4 20.4h9.3a3.4 3.4 0 0 0 .3-6.8 4.8 4.8 0 0 0-9.3.9 3 3 0 0 0-.3 5.9Z" />
+        </g>
+        <g id="w-nube" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 19.4h10a3.7 3.7 0 0 0 .3-7.4 5.2 5.2 0 0 0-10.1 1A3.3 3.3 0 0 0 7 19.4Z" />
+        </g>
+        <g id="w-lluvia" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 15.6h10a3.7 3.7 0 0 0 .3-7.4 5.2 5.2 0 0 0-10.1 1A3.3 3.3 0 0 0 7 15.6Z" />
+          <path d="M8.6 18.4 7.6 21M12.4 18.4l-1 2.6M16.2 18.4l-1 2.6" />
+        </g>
+        <g id="w-tormenta" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 14.6h10a3.7 3.7 0 0 0 .3-7.4 5.2 5.2 0 0 0-10.1 1A3.3 3.3 0 0 0 7 14.6Z" />
+          <path d="M13 17.2 10.4 21h3.2L11.4 24" />
+          <path d="M13 17.2 10.4 21h3.2" />
+        </g>
+        <g id="w-nieve" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 14.8h10a3.7 3.7 0 0 0 .3-7.4 5.2 5.2 0 0 0-10.1 1A3.3 3.3 0 0 0 7 14.8Z" />
+          <path d="M8.8 18.6h.01M12.4 20.2h.01M16 18.6h.01M10.6 21.2h.01M14.2 17.4h.01" />
+        </g>
+        <g id="w-niebla" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 12.6h10a3.7 3.7 0 0 0 .3-7.4 5.2 5.2 0 0 0-10.1 1A3.3 3.3 0 0 0 7 12.6Z" />
+          <path d="M4.4 16.2h15.2M6.4 19.4h11.2" />
+        </g>
+        <g id="w-luna" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z" />
+        </g>
+
+        <!-- de sección -->
         <g id="i-reloj" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
           <circle cx="8" cy="8" r="6.4" /><path d="M8 4.4V8l2.4 1.6" />
         </g>
@@ -26,7 +60,7 @@
         <g id="i-viento" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
           <path d="M1.6 5.4h8a2 2 0 1 0-2-2M1.6 8.6h10.6a2 2 0 1 1-2 2M1.6 11.8h6" />
         </g>
-        <g id="i-sol" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <g id="i-amanecer" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
           <path d="M1.4 12.6h13.2M4.6 12.6a3.4 3.4 0 0 1 6.8 0M8 2v2.2M3.1 4.1l1.5 1.5M12.9 4.1l-1.5 1.5" />
         </g>
         <g id="i-aviso" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
@@ -44,37 +78,41 @@
         <g id="i-gota" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
           <path d="M8 1.8c2.6 3 4.4 5.2 4.4 7.4a4.4 4.4 0 1 1-8.8 0C3.6 7 5.4 4.8 8 1.8Z" />
         </g>
+        <g id="i-sobre" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+          <rect x="1.6" y="3.2" width="12.8" height="9.6" rx="2" /><path d="m1.9 5 6.1 4 6.1-4" />
+        </g>
       </defs>
     </svg>
 
     <header class="barra">
       <div class="carril barra__fila">
-        <a class="marca" href="#">YTG<i>-01</i></a>
+        <a class="marca" href="#">Yago Torres</a>
         <div class="ciudades" role="group" aria-label="Elegir ciudad">
           <button type="button" data-ciudad="tudela">Tudela</button>
           <button type="button" data-ciudad="zaragoza" aria-pressed="true">Zaragoza</button>
           <button type="button" data-ciudad="madrid">Madrid</button>
         </div>
-        <a class="boton" href="#contacto">Contacto</a>
+        <a class="boton" href="#contacto">Escríbeme</a>
       </div>
     </header>
 
     <main>
-      <!-- ─── cabecera del tiempo ─────────────────────────── -->
+      <!-- ─── cabecera ────────────────────────────────────── -->
       <section class="carril cumbre">
         <h1 class="cumbre__ciudad" id="ciudad-nombre">Zaragoza</h1>
-        <p class="cumbre__grado" id="ahora-temp">--°</p>
+        <div class="cumbre__lectura">
+          <svg class="cumbre__icono" viewBox="0 0 24 24" aria-hidden="true">
+            <use id="icono-cielo" href="#w-sol" />
+          </svg>
+          <p class="cumbre__grado" id="ahora-temp">--°</p>
+        </div>
         <p class="cumbre__cielo" id="ahora-cielo">—</p>
         <p class="cumbre__extremos">
           Sensación <span id="ahora-sensacion">--°</span> ·
           <span id="ahora-hora">--:--</span> ·
           <span id="ahora-estacion">—</span>
         </p>
-        <p class="cumbre__quien">
-          <strong>Yago Torres</strong>, ingeniero de software. IA generativa, agentes y
-          automatización, con la infraestructura de fondo. Mi currículum, leído como un parte
-          del tiempo.
-        </p>
+        <p class="cumbre__quien">Ingeniero de software · IA generativa, agentes y devops</p>
       </section>
 
       <div class="azotea">
@@ -92,27 +130,31 @@
         <!-- próximas horas = certificaciones -->
         <section class="tarjeta tarjeta--ancha" id="proximas">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-reloj" /></svg>
-            Próximas horas · certificaciones en camino
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-reloj" /></svg>
+            Próximas horas
           </h2>
           <div class="horas">
             <div class="hora">
               <span class="hora__cuando">En breve</span>
+              <svg class="hora__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-sol" /></svg>
               <span class="hora__codigo">AZ-900</span>
               <span class="hora__que">Azure Fundamentals</span>
             </div>
             <div class="hora">
               <span class="hora__cuando">Después</span>
+              <svg class="hora__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-sol" /></svg>
               <span class="hora__codigo">AI-900</span>
               <span class="hora__que">Azure AI Fundamentals</span>
             </div>
             <div class="hora">
               <span class="hora__cuando">Más tarde</span>
+              <svg class="hora__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-sol-nube" /></svg>
               <span class="hora__codigo">AZ-104</span>
               <span class="hora__que">Azure Administrator</span>
             </div>
             <div class="hora">
               <span class="hora__cuando">En el horizonte</span>
+              <svg class="hora__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-nube" /></svg>
               <span class="hora__codigo">GH-200</span>
               <span class="hora__que">GitHub Actions</span>
             </div>
@@ -122,12 +164,13 @@
         <!-- pronóstico = experiencia -->
         <section class="tarjeta tarjeta--ancha" id="pronostico">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-calendario" /></svg>
-            Pronóstico · dónde he trabajado
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-calendario" /></svg>
+            Pronóstico
           </h2>
 
           <article class="dia" data-faena="trabajar">
             <p class="dia__cuando">sep 2026<small>hoy</small></p>
+            <svg class="dia__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-sol" /></svg>
             <div>
               <h3>Capgemini <span>· Equipo GenAI</span></h3>
               <ul>
@@ -139,6 +182,7 @@
 
           <article class="dia" data-faena="regar">
             <p class="dia__cuando">jun 2024<small>ago 2024</small></p>
+            <svg class="dia__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-sol-nube" /></svg>
             <div>
               <h3>INETUM <span>· Análisis documental con IA</span></h3>
               <ul>
@@ -154,6 +198,7 @@
 
           <article class="dia" data-faena="paraguas">
             <p class="dia__cuando">may 2023<small>ago 2023</small></p>
+            <svg class="dia__icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#w-lluvia" /></svg>
             <div>
               <h3>Urtats <span>· Socorrista</span></h3>
               <ul>
@@ -167,8 +212,8 @@
         <!-- viento = stack -->
         <section class="tarjeta tarjeta--ancha" id="viento">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-viento" /></svg>
-            Viento · con qué trabajo y a qué velocidad
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-viento" /></svg>
+            Viento
           </h2>
           <div class="racha" data-fuerza="88"><span>Linux y administración de sistemas</span><span class="racha__barra"><i></i></span><b>88</b></div>
           <div class="racha" data-fuerza="85"><span>Docker · Kubernetes · Terraform · OpenStack</span><span class="racha__barra"><i></i></span><b>85</b></div>
@@ -178,14 +223,14 @@
           <div class="racha" data-fuerza="58"><span>JavaScript · TypeScript · React · Next</span><span class="racha__barra"><i></i></span><b>58</b></div>
           <div class="racha" data-fuerza="44"><span>SQL</span><span class="racha__barra"><i></i></span><b>44</b></div>
           <div class="racha" data-fuerza="32"><span>Haskell</span><span class="racha__barra"><i></i></span><b>32</b></div>
-          <p class="apunte">Km/h de lo suelto que voy con cada cosa. Estimación mía, no una nota.</p>
+          <p class="apunte">Km/h de lo suelto que voy con cada cosa. Estimación mía.</p>
         </section>
 
         <!-- amanecer y atardecer = carrera -->
         <section class="tarjeta" id="formacion">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-sol" /></svg>
-            Amanecer y atardecer · la carrera
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-amanecer" /></svg>
+            Amanecer y atardecer
           </h2>
           <div class="arco">
             <div class="arco__curva" aria-hidden="true"></div>
@@ -207,7 +252,7 @@
         <!-- condiciones -->
         <section class="tarjeta">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-gota" /></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-gota" /></svg>
             Condiciones
           </h2>
           <div class="pareja">
@@ -221,8 +266,8 @@
         <!-- avisos = premios -->
         <section class="tarjeta" id="avisos">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-aviso" /></svg>
-            Avisos · premios
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-aviso" /></svg>
+            Avisos
           </h2>
           <div class="aviso-linea" data-nivel="rojo">
             <i></i>
@@ -249,8 +294,8 @@
         <!-- estaciones = proyectos -->
         <section class="tarjeta" id="estaciones">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-antena" /></svg>
-            Estaciones · lo que hago por mi cuenta
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-antena" /></svg>
+            Estaciones
           </h2>
           <a class="estacion" href="https://github.com/Yago-Torres/Yago_personal_page" target="_blank" rel="noopener noreferrer">
             <div><h3>yagotg.dev</h3><p>Esta azotea</p></div><span>Repo →</span>
@@ -269,22 +314,20 @@
         <!-- idiomas y música -->
         <section class="tarjeta">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-birrete" /></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-birrete" /></svg>
             Otras estaciones
           </h2>
           <div class="lista">
             <div><span>Inglés C1 · Alemán B1 · EOI</span><small>—</small></div>
             <div><span>Estudios profesionales de música · Conservatorio de Tudela</span><small>2012</small></div>
           </div>
-          <p class="apunte">
-            De ahí las guitarras, el piano y el micro de la azotea. Pulsa cualquiera y verás.
-          </p>
+          <p class="apunte">Pulsa el piano, las guitarras o el micro de la azotea.</p>
         </section>
 
         <!-- deja tu marca -->
-        <section class="tarjeta tarjeta--ancha" id="marca">
+        <section class="tarjeta" id="marca">
           <h2 class="tarjeta__titulo">
-            <svg aria-hidden="true"><use href="#i-lapiz" /></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lapiz" /></svg>
             Deja tu marca
           </h2>
           <form id="forma-marca" autocomplete="off" style="display: grid; gap: 12px">
@@ -296,15 +339,48 @@
             </div>
           </form>
           <p class="marca-eco" id="marca-eco" hidden></p>
+          <p class="apunte">Se guarda solo en este navegador.</p>
+        </section>
+
+        <!-- contacto -->
+        <section class="tarjeta tarjeta--ancha" id="contacto">
+          <h2 class="tarjeta__titulo">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-sobre" /></svg>
+            Escríbeme
+          </h2>
+
+          <form id="forma-contacto" class="contacto">
+            <div class="contacto__par">
+              <label>
+                <span class="etiqueta">Tu nombre</span>
+                <input class="campo" name="nombre" type="text" required maxlength="80" autocomplete="name" />
+              </label>
+              <label>
+                <span class="etiqueta">Tu correo</span>
+                <input class="campo" name="correo" type="email" required maxlength="120" autocomplete="email" />
+              </label>
+            </div>
+            <label>
+              <span class="etiqueta">Mensaje</span>
+              <textarea class="campo" name="mensaje" rows="4" required maxlength="2000"></textarea>
+            </label>
+            <!-- trampa para robots: una persona nunca la rellena -->
+            <input class="trampa" name="web" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <div class="contacto__pie">
+              <button class="boton boton--solido" id="enviar-contacto" type="submit">Enviar</button>
+              <p class="apunte" id="estado-contacto" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+
           <p class="apunte">
-            De momento se guarda solo en este navegador. Cuando la azotea pase a ser
-            compartida, los mensajes se moderarán antes de publicarse.
+            O directamente a
+            <a href="mailto:torresgarciayago@gmail.com">torresgarciayago@gmail.com</a>.
           </p>
         </section>
       </div>
     </main>
 
-    <footer class="carril pie" id="contacto">
+    <footer class="carril pie">
       <p>
         <a href="mailto:torresgarciayago@gmail.com">torresgarciayago@gmail.com</a>
         &nbsp;·&nbsp;

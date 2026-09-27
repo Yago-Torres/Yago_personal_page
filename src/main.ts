@@ -167,6 +167,16 @@ function ciudadGuardada(): Ciudad {
 
 let ciudad: Ciudad = ciudadGuardada();
 
+/** El símbolo que se enseña arriba, según la condición y si es de día. */
+const SIMBOLO: Record<string, string> = {
+  despejado: "#w-sol",
+  nubes: "#w-sol-nube",
+  niebla: "#w-niebla",
+  lluvia: "#w-lluvia",
+  tormenta: "#w-tormenta",
+  nieve: "#w-nieve",
+};
+
 const CIELO_TEMA: Record<string, string> = {
   despejado: "#2f7cc9",
   nubes: "#5c7d97",
@@ -200,6 +210,15 @@ function pintar() {
   if (meteo.real) {
     pon("#hora-amanecer", `Sale a las ${meteo.amanecer}`);
     pon("#hora-atardecer", `Se pone a las ${meteo.atardecer}`);
+  }
+
+  const icono = document.getElementById("icono-cielo");
+  if (icono) {
+    // de noche y despejado manda la luna; con nubes, el símbolo de siempre
+    const cual = !meteo.esDeDia && meteo.cielo === "despejado"
+      ? "#w-luna"
+      : (SIMBOLO[meteo.cielo] ?? "#w-sol");
+    icono.setAttribute("href", cual);
   }
 
   escena?.alumbrar(meteo.esDeDia);
@@ -289,3 +308,68 @@ if (campo) {
 }
 
 $("#forma-marca")?.addEventListener("submit", (e) => e.preventDefault());
+
+/* ─── escríbeme ─────────────────────────────────────────────── */
+
+// El endpoint solo envía si el dominio está dado de alta en Email Sending.
+// Si no lo está, responde 503 y aquí se abre el cliente de correo del
+// visitante con el mensaje ya escrito: el formulario sirve igual.
+const CORREO = "torresgarciayago@gmail.com";
+
+const forma = $<HTMLFormElement>("#forma-contacto");
+const estado = $("#estado-contacto");
+const enviar = $<HTMLButtonElement>("#enviar-contacto");
+
+function decir(texto: string, como: "bien" | "mal" | "" = "") {
+  if (!estado) return;
+  estado.textContent = texto;
+  if (como) estado.dataset["estado"] = como;
+  else delete estado.dataset["estado"];
+}
+
+function porCliente(nombre: string, correo: string, mensaje: string) {
+  const asunto = encodeURIComponent(`Hola Yago — ${nombre}`);
+  const cuerpo = encodeURIComponent(`${mensaje}
+
+—
+${nombre}
+${correo}`);
+  location.href = `mailto:${CORREO}?subject=${asunto}&body=${cuerpo}`;
+  decir("Te he abierto tu correo con el mensaje escrito. Solo queda darle a enviar.");
+}
+
+forma?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const datos = Object.fromEntries(new FormData(forma)) as Record<string, string>;
+  const nombre = (datos["nombre"] ?? "").trim();
+  const correo = (datos["correo"] ?? "").trim();
+  const mensaje = (datos["mensaje"] ?? "").trim();
+  if (!nombre || !correo || !mensaje) return;
+
+  if (enviar) enviar.disabled = true;
+  decir("Enviando…");
+
+  try {
+    const r = await fetch("/api/contacto", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ nombre, correo, mensaje, web: datos["web"] ?? "" }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (r.ok) {
+      forma.reset();
+      decir("Recibido. Te contesto en cuanto pueda.", "bien");
+    } else {
+      // 400 es culpa del formulario; cualquier otra cosa (404 sin desplegar,
+      // 503 sin envío montado, 5xx) significa que aquí no se puede enviar
+      const cuerpo = (await r.json().catch(() => ({}))) as { error?: string };
+      if (r.status === 400 && cuerpo.error) decir(cuerpo.error, "mal");
+      else porCliente(nombre, correo, mensaje);
+    }
+  } catch {
+    porCliente(nombre, correo, mensaje);
+  } finally {
+    if (enviar) enviar.disabled = false;
+  }
+});
